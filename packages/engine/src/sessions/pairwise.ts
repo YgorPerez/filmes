@@ -20,6 +20,10 @@
 // Recorded, the chosen film becomes a Nota of `PAIRWISE_RATING` (weak on the
 // ruler) and the other a Já visto with no Nota; then each answer gets
 // `recorded_on` (or `discarded_on`) and no longer waits.
+//
+// A guest's Vi e gostei / Vi e não gostei of the swipe (#378,
+// `seen-gestures.ts`) waits in the same place and goes with the same
+// decision.
 
 import { Effect } from 'effect'
 import type { FilmRef } from '../catalog/search.ts'
@@ -52,6 +56,13 @@ import {
 import { sessionOwner } from './feedback.ts'
 import { isOpen, readSession, writeSession } from './file.ts'
 import { authorFor } from './open.ts'
+import {
+  recordGestures,
+  settleGestures,
+  waitingGestures,
+  type SeenReaction,
+} from './seen-gestures.ts'
+import { awaitsOwner } from './waiting.ts'
 
 /** The chosen film's Nota: 3,5 of 5, weak on the ruler. */
 export const PAIRWISE_RATING = 3.5
@@ -86,10 +97,17 @@ export interface WaitingAnswer {
   readonly other: FilmRef
 }
 
+/** A guest's Vi e gostei / Vi e não gostei that waits (#378). */
+export interface WaitingGesture {
+  readonly film: FilmRef
+  readonly reaction: SeenReaction
+}
+
 export interface WaitingAnswers {
   readonly person: string
   readonly name: string
   readonly answers: ReadonlyArray<WaitingAnswer>
+  readonly seen: ReadonlyArray<WaitingGesture>
 }
 
 export interface PairwiseDecision {
@@ -118,20 +136,18 @@ const plain = (item: YamlValue): Stored =>
 const filmsOf = (answer: Stored): string[] =>
   Array.isArray(answer.films) ? answer.films.map(String) : []
 
-const waits = (answer: Stored) =>
-  answer.recorded_on === undefined && answer.discarded_on === undefined
-
-/** Discard the answers that have not become taste yet. */
+/** Discard the answers and gestures that have not become taste yet. */
 export function discardWaitingAnswers(
   front: Map<string, YamlValue>,
   today: string,
 ) {
+  settleGestures(front, 'discard', today)
   const answers = storedAnswers(front)
   if (answers.length === 0) return
   front.set(
     'pairwise',
     answers.map((answer) =>
-      isMapping(answer) && waits(plain(answer))
+      isMapping(answer) && awaitsOwner(plain(answer))
         ? new Map([...answer, ['discarded_on', today]])
         : answer,
     ),
@@ -316,7 +332,8 @@ export const answerPairwise = (
   })
 
 /** What waits for the Dono's yes, by Presente in the order each first
- * answered: each answer with a choice, as chosen and other. */
+ * answered or gestured: each answer with a choice, as chosen and other,
+ * and each Vi e gostei / Vi e não gostei. */
 export const pairwiseAnswers = (
   session: string,
 ): Effect.Effect<
@@ -328,27 +345,42 @@ export const pairwiseAnswers = (
     const { frontmatter } = yield* readSession(session)
     const waiting = storedAnswers(frontmatter)
       .map(plain)
-      .filter((a) => waits(a) && typeof a.choice === 'string')
-    if (waiting.length === 0) return []
+      .filter((a) => awaitsOwner(a) && typeof a.choice === 'string')
+    const gestures = waitingGestures(frontmatter)
+    if (waiting.length === 0 && gestures.length === 0) return []
     return yield* (yield* Sqlite).read((db) =>
       Effect.gen(function* () {
-        const ids = [...new Set(waiting.flatMap(filmsOf))]
+        const ids = [
+          ...new Set([
+            ...waiting.flatMap(filmsOf),
+            ...gestures.map((g) => g.film),
+          ]),
+        ]
         const films = new Map(
           (yield* db.all(FILMS_BY_ID, JSON.stringify(ids))).map((row) => [
             text(row, 'id'),
             filmOf(row),
           ]),
         )
-        const byPerson = new Map<string, WaitingAnswer[]>()
+        const byPerson = new Map<
+          string,
+          { answers: WaitingAnswer[]; seen: WaitingGesture[] }
+        >()
+        const waitingOf = (person: string) => {
+          const hers = byPerson.get(person) ?? { answers: [], seen: [] }
+          byPerson.set(person, hers)
+          return hers
+        }
         for (const answer of waiting) {
-          const person = String(answer.person)
           const chosen = String(answer.choice)
           const other = filmsOf(answer).find((f) => f !== chosen)!
-          byPerson.set(person, [
-            ...(byPerson.get(person) ?? []),
-            { chosen: films.get(chosen)!, other: films.get(other)! },
-          ])
+          waitingOf(String(answer.person)).answers.push({
+            chosen: films.get(chosen)!,
+            other: films.get(other)!,
+          })
         }
+        for (const { person, film, reaction } of gestures)
+          waitingOf(person).seen.push({ film: films.get(film)!, reaction })
         const names = new Map(
           (yield* db.all(
             `SELECT j.value AS slug, COALESCE(p.nome, j.value) AS nome
@@ -356,10 +388,11 @@ export const pairwiseAnswers = (
             JSON.stringify([...byPerson.keys()]),
           )).map((row) => [text(row, 'slug'), text(row, 'nome')]),
         )
-        return [...byPerson].map(([person, answers]) => ({
+        return [...byPerson].map(([person, { answers, seen }]) => ({
           person,
           name: names.get(person)!,
           answers,
+          seen,
         }))
       }),
     )
@@ -415,10 +448,11 @@ const recordAnswers = (
     return { person, added }
   })
 
-/** The Dono's decision on a Presente's waiting answers. Recorded, the
- * chosen films become Notas of `PAIRWISE_RATING` and the others Já vistos
- * with no Nota, skipping a film she already has a Já visto for; either
- * way the answers stop waiting. One commit. Works on a closed Session too:
+/** The Dono's decision on a Presente's waiting answers and gestures.
+ * Recorded, the chosen films become Notas of `PAIRWISE_RATING` and the
+ * others Já vistos with no Nota, skipping a film she already has a Já
+ * visto for, and each Vi e gostei / Vi e não gostei a Já visto and a
+ * Declarado; either way they stop waiting. One commit. Works on a closed Session too:
  * the answers are still there. */
 export const decidePairwise = (
   decision: PairwiseDecision,
@@ -446,7 +480,7 @@ export const decidePairwise = (
           const stored = storedAnswers(front)
           const mine = stored
             .map((item, index) => [index, plain(item)] as const)
-            .filter(([, a]) => a.person === slug && waits(a))
+            .filter(([, a]) => a.person === slug && awaitsOwner(a))
           let added = 0
           if (record) {
             const recorded = yield* recordAnswers(db, {
@@ -458,6 +492,19 @@ export const decidePairwise = (
             person = recorded.person
             added = recorded.added
           }
+          const gestures = waitingGestures(front).filter(
+            (g) => g.person === slug,
+          )
+          if (record && gestures.length > 0) {
+            person = yield* recordGestures(db, {
+              person,
+              gestures,
+              session,
+              today,
+            })
+            added += gestures.length
+          }
+          settleGestures(front, record ? 'record' : 'discard', today, slug)
           if (mine.length > 0) {
             for (const [index] of mine)
               stored[index] = new Map([
@@ -465,8 +512,9 @@ export const decidePairwise = (
                 [record ? 'recorded_on' : 'discarded_on', today],
               ])
             front.set('pairwise', stored)
-            yield* writeSession(session, front, read.body)
           }
+          if (mine.length > 0 || gestures.length > 0)
+            yield* writeSession(session, front, read.body)
           return { person: slug, added }
         }),
     )

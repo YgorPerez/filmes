@@ -1,13 +1,15 @@
-// The group swipe: one film at a time, Não or Sim, the recap, and the
-// night's list after the Votos went.
+// The group swipe: one film at a time, Não or Sim, the recap, her Ordem,
+// and the night's list after the Votos went.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, within } from 'storybook/test'
 import { VoteCards, VoteScreen } from './session-votes'
 import { VOTES } from './session-votes.copy'
-import { VIEW, VOTED } from './session-link.fixture'
-
-const DECK = { version: VIEW.version, films: VIEW.films, left: [] }
-const AFTER = { version: VOTED.version, films: VOTED.films, left: VOTED.left }
+import { NEW_STICKER } from './kit/sticker'
+import {
+  GUEST_AFTER as AFTER,
+  GUEST_DECK as DECK,
+  OWNER_DECK,
+} from './session-votes.fixture'
 
 const LINK = { sessao: '2026-11-20-iara', chave: 'k', presente: 'iara' }
 
@@ -44,6 +46,31 @@ export const Deck: Story = {
   },
 }
 
+/** The Dono's deck: her own Nota prevista on the card, and everyone's
+ * lines on the sheet (#377). */
+export const OwnerSheet: Story = {
+  args: { deck: OWNER_DECK },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: VOTES.more }))
+    const page = within(canvasElement.ownerDocument.body)
+    await expect(page.getByRole('dialog')).toBeVisible()
+  },
+}
+
+/** Back after her Votos: the film that came in since has NOVO (#380). */
+export const NewFilm: Story = {
+  args: { deck: AFTER },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('heading', { name: 'Ponte Aérea' }),
+    ).toBeVisible()
+    // Not `toBeVisible`: the sticker comes in from transparent.
+    await expect(canvas.getByText(NEW_STICKER)).toBeInTheDocument()
+  },
+}
+
 export const Recap: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -70,6 +97,28 @@ export const Recap: Story = {
     await expect(
       canvas.getByRole('heading', { name: VOTES.summary(3, 0) }),
     ).toBeVisible()
+  },
+}
+
+/** Her Ordem (#379): three yes films, the handle moves the last one up. */
+export const Ranking: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    for (const name of [VOTES.yes, VOTES.yes, VOTES.yes, VOTES.rankStart])
+      await userEvent.click(canvas.getByRole('button', { name }))
+    await expect(
+      canvas.getByRole('heading', { level: 1, name: VOTES.rankPage }),
+    ).toBeVisible()
+    canvas
+      .getByRole('button', { name: VOTES.rankMove('Noite de Estreia', 3, 3) })
+      .focus()
+    await userEvent.keyboard('{ArrowUp}')
+    await expect(
+      canvas.getByRole('button', {
+        name: VOTES.rankMove('Noite de Estreia', 2, 3),
+      }),
+    ).toBeVisible()
+    await expect(canvas.getByRole('button', { name: VOTES.send })).toBeVisible()
   },
 }
 

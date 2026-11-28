@@ -17,6 +17,7 @@ import { Billboard } from './billboard'
 import { CHOSEN_OUTSIDE, CLOSED, MODEL } from './billboard.fixture'
 import { parseMarks } from './billboard-marks'
 import { BILLBOARD } from './billboard.copy'
+import { NEW_STICKER } from './kit/sticker'
 import { CHOSEN as CHOSEN_COPY } from './billboard-chosen.copy'
 
 const KEY = 'filmes-cartaz:2026-11-20-iara:v2'
@@ -77,8 +78,12 @@ describe('the Cartaz shows', () => {
         (c) => within(c).getByRole('heading', { level: 3 }).textContent,
       ),
     ).toEqual(['1As Horas Lentas', '2Sal & FerrugemSal e Ferrugem'])
-    // No "novo" sticker on a film that came in the last redo (#326).
-    expect(screen.queryByText('novo')).toBeNull()
+  })
+
+  it('the NOVO sticker on a film that came in with this version only (#380)', () => {
+    render(<Billboard billboard={MODEL} action="/x" />)
+    expect(within(cards()[1]!).getByText(NEW_STICKER)).toBeTruthy()
+    expect(within(cards()[0]!).queryByText(NEW_STICKER)).toBeNull()
   })
 
   it('the films under the title of their Motivo, in the same order', () => {

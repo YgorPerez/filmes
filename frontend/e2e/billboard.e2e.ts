@@ -1,8 +1,8 @@
 // The Cartaz over the build, on the fixture copy (never the real
 // filmes-dados), with the sources answering from the recordings. The Dono
 // marks films, reloads (the marks come back), sends, and the Session is
-// redone: the films that stayed keep their number, no film has a "novo"
-// mark (#326), and "Saiu" says what left and why. A Já vi writes a Já
+// redone: the films that stayed keep their number, the new ones have the
+// "novo" sticker (#380), and "Saiu" says what left and why. A Já vi writes a Já
 // visto in the Pessoa's file, so each project marks a Pessoa of its own
 // (the file's other tests read the fixture's Pessoas).
 // `E2E_SCREENSHOTS=<folder>` saves each screen.
@@ -312,11 +312,16 @@ async function sendAndSeeRedone(
     await expect(left).toBeVisible({ timeout: 1000 })
     await expect(traded).toBeVisible({ timeout: 1000 })
   }).toPass()
-  // The kept films stay at their number; the ones that came in carry no
-  // "novo" mark (#326).
+  // The kept films stay at their number; the ones that came in are new
+  // (#380).
   expect(await titleOf(page, 3)).toBe(third)
   expect(await titleOf(page, 4)).toBe(fourth)
-  await expect(page.getByText('novo', { exact: true })).toHaveCount(0)
+  for (const n of [1, 2])
+    await expect(card(page, n).getByText('novo', { exact: true })).toBeVisible()
+  for (const n of [3, 4])
+    await expect(card(page, n).getByText('novo', { exact: true })).toHaveCount(
+      0,
+    )
   // The new version starts with no marks.
   await expect(
     card(page, 2).getByRole('button', { name: 'Trocar' }),

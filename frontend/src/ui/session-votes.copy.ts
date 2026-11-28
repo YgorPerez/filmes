@@ -17,15 +17,24 @@ export const VOTES = {
     no: 'Não',
     noDoes: 'tira o filme da noite pra todo mundo.',
     yes: 'Sim',
-    yesDoes: 'sobe ele na lista.',
+    yesDoes: 'entra na sua ordem, que você monta no fim.',
+    seen: 'Vi',
+    seenDoes: 'também tira e diz se você gostou.',
   },
   /** The rule as one sentence, for tests and the screen reader. */
-  ruleText: 'Não tira o filme da noite pra todo mundo. Sim sobe ele na lista.',
+  ruleText:
+    'Não tira o filme da noite pra todo mundo. Sim entra na sua ordem, que você monta no fim. Vi também tira e diz se você gostou.',
   /** How to vote: the arrow keys only where there is a keyboard. */
   hint: {
-    touch: 'Arraste o cartão pro lado ou toque nos botões.',
-    keys: 'Arraste o cartão pro lado, toque nos botões ou use as setas ← →.',
+    touch:
+      'Arraste o cartão pro lado, pra cima se viu e gostou, pra baixo se viu e não gostou, ou toque nos botões.',
+    keys: 'Arraste o cartão, toque nos botões ou use as setas ← → ↑ ↓.',
   },
+  /** Opens the film's full sheet (#377). */
+  more: 'Mais sobre o filme',
+  /** Her own Nota prevista on the card: "previsto 8,3". */
+  imdb: (rating: string) => `IMDb ${rating}`,
+  predicted: (text: string) => `previsto ${text}`,
   of: (n: number, total: number) => `Filme ${n} de ${total}`,
   /** What a screen reader hears when the card changes. */
   now: (n: number, total: number, title: string) =>
@@ -33,22 +42,59 @@ export const VOTES = {
   wentBack: (title: string) => `Voltou: ${title}`,
   no: 'Não',
   yes: 'Sim',
+  /** The "vi" gestures (#378): up and down. */
+  like: 'Vi e gostei',
+  dislike: 'Vi e não gostei',
+  /** Their short words on a recap row, where the name is the whole
+   * gesture. */
+  recapLiked: 'Gostei',
+  recapDisliked: 'Não gostei',
   stampNo: 'Não',
   stampYes: 'Sim',
+  stampLike: 'Vi, gostei',
+  stampDislike: 'Vi, não gostei',
   back: 'Voltar',
-  summary: (yes: number, no: number) =>
-    `${count(yes, 'sim', 'sins')} · ${count(no, 'não', 'nãos')}`,
+  summary: (yes: number, no: number, seen = 0) =>
+    [
+      count(yes, 'sim', 'sins'),
+      count(no, 'não', 'nãos'),
+      ...(seen > 0 ? [count(seen, 'já visto', 'já vistos')] : []),
+    ].join(' · '),
   recap: 'Revise antes de enviar: dá pra mudar qualquer voto aqui.',
   /** Mudar votos: the recap opens on her earlier Votos (#340). */
   kept: 'Seus votos de antes estão marcados e valem até você enviar os novos. Mude o que quiser aqui.',
   /** What a screen reader hears after the last card. */
-  end: (yes: number, no: number) =>
-    `Fim: ${count(yes, 'sim', 'sins')}, ${count(no, 'não', 'nãos')}. Revise e envie.`,
-  /** The name of a recap row's Não / Sim pair. */
+  end: (yes: number, no: number, seen = 0) =>
+    `Fim: ${[
+      count(yes, 'sim', 'sins'),
+      count(no, 'não', 'nãos'),
+      ...(seen > 0 ? [count(seen, 'já visto', 'já vistos')] : []),
+    ].join(', ')}. Revise e envie.`,
+  /** The name of a recap row's switch. */
   voteOn: (title: string) => `Voto em ${title}`,
   leaving: (titles: readonly string[]) =>
     `Vai sair da noite: ${titles.join(', ')}.`,
   send: 'Enviar votos',
+  /** The recap's way to the Ordem (#379), with two or more sins. */
+  rankStart: 'Pôr em ordem',
+  /** The page's title over the Ordem. */
+  rankPage: 'Sua ordem',
+  rankTitle: 'Qual você quer mais?',
+  rankHint: {
+    touch:
+      'Arraste pela alça pra pôr na sua ordem: o primeiro é o que você mais quer. Se não quiser mexer, é só enviar.',
+    keys: 'Arraste pela alça ou use ↑ ↓ nela pra pôr na sua ordem: o primeiro é o que você mais quer. Se não quiser mexer, é só enviar.',
+  },
+  rankList: 'Sua ordem',
+  /** The handle's name, with where the film is now. */
+  rankMove: (title: string, n: number, total: number) =>
+    `Mover ${title}, ${n}º de ${total}`,
+  /** What a screen reader hears after a move. */
+  rankMoved: (title: string, n: number, total: number) =>
+    `${title}: ${n}º de ${total}`,
+  /** The sheet's não from the Ordem: the swipe's não. */
+  rankNo: 'Não, tira da noite',
+  rankBack: 'Voltar aos votos',
   sending: 'Enviando votos…',
   restart: 'Recomeçar',
   sent: 'Votos enviados',

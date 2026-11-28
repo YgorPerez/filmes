@@ -527,6 +527,19 @@ test('a Presente answers pairwise questions and the Dono records them', async ({
 })
 
 /** Votes yes, no and yes on the three films, from the first. */
+/** The deck's first Voto, a sim. The deck page comes by a plain link, and
+ * a tap before it hydrates is lost on a busy machine, so the tap is
+ * repeated only while the first card is still up: never a second Voto. */
+async function firstYes(page: Page, total: number) {
+  const first = page.getByText(`Filme 1 de ${total}`)
+  await expect(first).toBeVisible()
+  await expect(async () => {
+    if (await first.isVisible())
+      await page.getByRole('button', { name: 'Sim', exact: true }).click()
+    await expect(first).toBeHidden({ timeout: 1000 })
+  }).toPass()
+}
+
 async function voteYesNoYes(
   participant: Page,
   info: TestInfo,
@@ -538,10 +551,34 @@ async function voteYesNoYes(
   await expect(participant.getByRole('heading', { name: first })).toBeVisible()
   await snap(participant, info, 'sessao-votar')
 
+  // A tap on the full-screen card opens its full sheet (#377). The first
+  // tap can land before the deck hydrates, so tap until the sheet opens.
+  const sheet = participant.getByRole('dialog')
+  await expect(async () => {
+    if ((await sheet.count()) === 0)
+      await participant
+        .getByRole('article')
+        .click({ position: { x: 24, y: 260 } })
+    await expect(sheet.getByRole('heading', { name: first })).toBeVisible({
+      timeout: 1000,
+    })
+  }).toPass()
+  await expect(
+    sheet.getByRole('link', { name: /IMDb.* votos$/u }),
+  ).toBeVisible()
+  await snap(participant, info, 'sessao-votar-ficha')
+  await sheet.getByRole('button', { name: 'Fechar' }).click()
+  await expect(sheet).toHaveCount(0)
+
+  // By button, by the keyboard, and from the sheet.
   await participant.getByRole('button', { name: 'Sim', exact: true }).click()
   await expect(participant.getByRole('heading', { name: second })).toBeVisible()
-  await participant.getByRole('button', { name: 'Não', exact: true }).click()
-  await participant.getByRole('button', { name: 'Sim', exact: true }).click()
+  await participant.keyboard.press('ArrowLeft')
+  await expect(participant.getByRole('heading', { name: second })).toHaveCount(
+    0,
+  )
+  await participant.getByRole('button', { name: 'Mais sobre o filme' }).click()
+  await sheet.getByRole('button', { name: 'Sim', exact: true }).click()
   await expect(participant.getByText('2 sins · 1 não')).toBeVisible()
   await snap(participant, info, 'sessao-votos-resumo')
 }
@@ -561,6 +598,8 @@ async function sendVotesSwapping(
   await participant.evaluate(() => {
     document.documentElement.dataset.votePage = 'original'
   })
+  // Two yes films: her Ordem comes before the send (#379); she keeps it.
+  await participant.getByRole('button', { name: 'Pôr em ordem' }).click()
   try {
     await participant.getByRole('button', { name: 'Enviar votos' }).click()
     await expect(
@@ -619,25 +658,104 @@ test('each Presente votes on the films; a no swaps the film and the Session is r
   })
 })
 
-/** One earlier yes of each `[who, film]`, on the first version. */
-async function castEarlierYes(
-  session: string,
-  yeses: readonly (readonly [string, string])[],
-) {
-  for (const [who, film] of yeses)
-    await engineRun((engine) =>
-      engine.run(
-        castVotes({
-          session,
-          person: who,
-          version: 1,
-          votes: [{ film, vote: 'yes' }],
-        }),
-      ),
-    )
+/** Drags the full-screen card up or down past the line, as a finger
+ * would. */
+async function dragCard(participant: Page, dy: number) {
+  const box = await participant.getByRole('article').boundingBox()
+  if (!box) throw new Error('Expected the card')
+  const x = box.x + box.width / 2
+  const y = box.y + box.height * 0.35
+  await participant.mouse.move(x, y)
+  await participant.mouse.down()
+  await participant.mouse.move(x, y + dy, { steps: 8 })
+  await participant.mouse.up()
 }
 
-test('a Presente sends only yes votes and the Dono sees the new Cartaz order', async ({
+test('a Presente swipes up and down on films she saw; they leave and wait for the Dono (#378)', async ({
+  page,
+  browser,
+}, info) => {
+  const { person, name } = guestOf(info)
+  const opened = await openAsBruno({ attendees: ['dono', person], count: 3 })
+  const [first, second, third] = opened.films.map((film) => film.title)
+  const path = `/sessoes/${opened.session.id}`
+  const href = await brunoSharesWith(page, path, person)
+
+  await asParticipant(browser, href, async (participant) => {
+    await participant.getByRole('link', { name: 'Votar nos filmes' }).click()
+    const card = (title?: string) =>
+      participant.getByRole('heading', { name: title })
+    await expect(card(first)).toBeVisible()
+    // Before the deck hydrates a drag does nothing: drag again until the
+    // card answers.
+    await expect(async () => {
+      if (await card(first).isVisible()) await dragCard(participant, -200)
+      await expect(card(second)).toBeVisible({ timeout: 1000 })
+    }).toPass()
+    await dragCard(participant, 200)
+    await expect(card(third)).toBeVisible()
+    await participant.getByRole('button', { name: 'Sim', exact: true }).click()
+    await expect(
+      participant.getByText('1 sim · nenhum não · 2 já vistos'),
+    ).toBeVisible()
+    await expect(
+      participant.getByText(`Vai sair da noite: ${first}, ${second}.`),
+    ).toBeVisible()
+    await snap(participant, info, 'sessao-vi-resumo')
+    await participant.getByRole('button', { name: 'Enviar votos' }).click()
+    await expect(participant.getByRole('status')).toHaveText(
+      'Votos contados. A lista foi refeita.',
+    )
+  })
+
+  await page.reload()
+  const onCartaz = (title?: string) =>
+    page.getByRole('heading', { level: 3 }).filter({ hasText: title })
+  await expect(onCartaz(first)).toHaveCount(0)
+  await expect(onCartaz(second)).toHaveCount(0)
+  await expect(onCartaz(third)).toHaveCount(1)
+  const answers = page.getByRole('form', { name })
+  const items = answers.getByRole('listitem')
+  await expect(items).toHaveCount(2)
+  await expect(items.nth(0)).toContainText(`Viu e gostou de ${first}`)
+  await expect(items.nth(1)).toContainText(`Viu e não gostou de ${second}`)
+  await snap(page, info, 'sessao-vi-dono')
+  await answers
+    .getByRole('button', { name: `Gravar as respostas de ${name}` })
+    .click()
+  await expect(page).toHaveURL(/\?feito=perguntas-gravadas$/u)
+  await expect(page.getByRole('form', { name })).toHaveCount(0)
+})
+
+/** `who` says yes to `films` on the first version, in that Ordem when
+ * `ranked` (#379). */
+async function castYes(
+  session: string,
+  who: string,
+  films: readonly string[],
+  ranked: boolean,
+) {
+  await engineRun((engine) =>
+    engine.run(
+      castVotes({
+        session,
+        person: who,
+        version: 1,
+        votes: films.map((film) => ({ film, vote: 'yes' as const })),
+        ...(ranked && { ranking: films }),
+      }),
+    ),
+  )
+}
+
+/** The titles of the Ordem's rows, in order. */
+const ordered = (participant: Page) =>
+  participant
+    .getByRole('list', { name: 'Sua ordem' })
+    .getByRole('listitem')
+    .allInnerTexts()
+
+test('two Presentes rank their yes films and the Cartaz follows the lowest sum of positions', async ({
   page,
   browser,
 }, info) => {
@@ -647,54 +765,64 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
     attendees: ['dono', person, other],
     count: 3,
   })
-  const [first, second, third] = opened.films
+  const [a, b, c] = [opened.films[0]!, opened.films[1]!, opened.films[2]!]
   const session = opened.session.id
-  // One earlier yes of this Presente on the first film, and one of the
-  // other on the third. The deck shows what this Presente has yet to vote
-  // on, and sends her earlier yes again with the new ones.
-  await castEarlierYes(session, [
-    [person, first!.id],
-    [other, third!.id],
-  ])
+  // The other Presente ranked c, a, b. This one said yes to the first film
+  // before, with no Ordem: the deck holds the 2 she has not voted on, and
+  // her Ordem has all three.
+  await castYes(session, other, [c.id, a.id, b.id], true)
+  await castYes(session, person, [a.id], false)
 
   await loginAsBruno(page)
   await page.goto(`/sessoes/${session}`)
   const titles = page.getByRole('article').getByRole('heading', { level: 3 })
   await expect(titles).toHaveCount(3)
-  await expect(titles).toContainText([
-    first!.title,
-    second!.title,
-    third!.title,
-  ])
+  await expect(titles).toContainText([a.title, b.title, c.title])
   const href = await sessionLinkFor(page, person)
 
   await asParticipant(browser, href, async (participant) => {
-    // Her earlier yes counts: the deck holds the 2 she has not voted on.
     await participant
       .getByRole('link', { name: 'Votar nos 2 que chegaram' })
       .click()
-    const yes = participant.getByRole('button', { name: 'Sim', exact: true })
-    await yes.click()
-    await yes.click()
+    await firstYes(participant, 2)
+    await participant.getByRole('button', { name: 'Sim', exact: true }).click()
     await expect(participant.getByText('2 sins · nenhum não')).toBeVisible()
+    await participant.getByRole('button', { name: 'Pôr em ordem' }).click()
+    await expect(
+      participant.getByRole('heading', { name: 'Qual você quer mais?' }),
+    ).toBeVisible()
+    expect(await ordered(participant)).toEqual(
+      [a, b, c].map((f, i) => expect.stringContaining(`${i + 1}. ${f.title}`)),
+    )
+    // She ranks b, c, a: the first film goes down twice.
+    await participant
+      .getByRole('button', { name: new RegExp(`^Mover ${a.title}`, 'u') })
+      .press('ArrowDown')
+    await participant
+      .getByRole('button', { name: new RegExp(`^Mover ${a.title}`, 'u') })
+      .press('ArrowDown')
+    await expect
+      .poll(() => ordered(participant))
+      .toEqual(
+        [b, c, a].map((f, i) =>
+          expect.stringContaining(`${i + 1}. ${f.title}`),
+        ),
+      )
+    await snap(participant, info, 'sessao-ordem')
     await participant.getByRole('button', { name: 'Enviar votos' }).click()
     await expect(participant.getByRole('status')).toHaveText(
       'Votos contados. A lista foi atualizada.',
     )
-    await snap(participant, info, 'sessao-sins-contados')
 
+    // c 1+2, b 3+1, a 2+3.
     await page.reload()
     await expect(titles).toHaveCount(3)
-    await expect(titles).toContainText([
-      third!.title,
-      first!.title,
-      second!.title,
-    ])
-    await snap(page, info, 'sessao-cartaz-reordenado')
+    await expect(titles).toContainText([c.title, b.title, a.title])
+    await snap(page, info, 'sessao-cartaz-pela-ordem')
 
     // Mudar votos opens again over every film (pass 4 F1): the router
     // writes `mudar` back, and the page must keep it. Her Votos come back
-    // chosen, on the recap (#340); Recomeçar asks every film again.
+    // chosen, on the recap (#340), and her Ordem as she left it (#379).
     await participant
       .getByRole('link', { name: 'Mudar votos', exact: true })
       .click()
@@ -706,8 +834,79 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
       participant.getByText(/Seus votos de antes estão marcados/u),
     ).toBeVisible()
     await snap(participant, info, 'sessao-mudar-votos')
+    await participant.getByRole('button', { name: 'Pôr em ordem' }).click()
+    await expect
+      .poll(() => ordered(participant))
+      .toEqual(
+        [b, c, a].map((f, i) =>
+          expect.stringContaining(`${i + 1}. ${f.title}`),
+        ),
+      )
+    await participant.getByRole('button', { name: 'Voltar aos votos' }).click()
     await participant.getByRole('button', { name: 'Recomeçar' }).click()
     await expect(participant.getByText('Filme 1 de 3')).toBeVisible()
+  })
+})
+
+// The Dono's own Votar (#376): from her Cartaz, the group swipe opens as
+// her, by the login, with no name to pick; the address alone does not.
+test('the Dono votes from her Cartaz by the login, and the Cartaz follows', async ({
+  page,
+  browser,
+}, info) => {
+  const { person } = guestOf(info)
+  // A group no other test opens: Session ids are taken by checking the
+  // folder, so two workers opening the same group at once share one.
+  const opened = await openAsBruno({
+    attendees: ['dono', person, 'vera'],
+    count: 3,
+  })
+  const [first, second, third] = opened.films.map((film) => film.title)
+  await loginAsBruno(page)
+  const cartaz = `/sessoes/${opened.session.id}`
+  await page.goto(cartaz)
+  const vote = page.getByRole('link', { name: 'Votar', exact: true })
+  await snap(page, info, 'sessao-cartaz-votar')
+  const href = new URL((await vote.getAttribute('href')) ?? '', page.url())
+  await vote.click()
+
+  await expect(page.getByText('Você entrou como')).toContainText('Bruno')
+  await expect(page.getByRole('heading', { name: 'Quem é você?' })).toHaveCount(
+    0,
+  )
+  await expect(page.getByRole('heading', { name: first })).toBeVisible()
+  await firstYes(page, 3)
+  await expect(page.getByRole('heading', { name: second })).toBeVisible()
+  await page.getByRole('button', { name: 'Não', exact: true }).click()
+  await expect(page.getByRole('heading', { name: third })).toBeVisible()
+  await page.getByRole('button', { name: 'Sim', exact: true }).click()
+  await expect(page.getByText('2 sins · 1 não')).toBeVisible()
+  await snap(page, info, 'sessao-dono-votos-resumo')
+  // Two yes films: her Ordem comes first (#379); she keeps it.
+  await page.getByRole('button', { name: 'Pôr em ordem' }).click()
+  await page.getByRole('button', { name: 'Enviar votos' }).click()
+  await expect(page.getByRole('status')).toHaveText(
+    'Votos contados. A lista foi refeita.',
+  )
+
+  // Her no is a Trocar from her, through the same path as a guest's.
+  await page.getByRole('link', { name: 'Voltar ao Cartaz' }).click()
+  await expect(page).toHaveURL(new RegExp(`${cartaz}$`, 'u'))
+  const onCartaz = (title?: string) =>
+    page.getByRole('heading', { level: 3 }).filter({ hasText: title })
+  await expect(onCartaz(second)).toHaveCount(0)
+  await expect(onCartaz(first)).toHaveCount(1)
+  await expect(onCartaz(third)).toHaveCount(1)
+  await snap(page, info, 'sessao-cartaz-depois-do-voto-do-dono')
+
+  // The same address, logged out: no swipe as her, only the names.
+  await asParticipant(browser, href.href, async (participant) => {
+    await expect(
+      participant.getByRole('heading', { name: 'Quem é você?' }),
+    ).toBeVisible()
+    await expect(participant.getByRole('link', { name: 'Bruno' })).toHaveCount(
+      0,
+    )
   })
 })
 

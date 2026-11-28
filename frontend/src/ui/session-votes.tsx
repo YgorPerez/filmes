@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type FormEventHandler,
@@ -14,30 +15,58 @@ import {
 } from '#/content/session-votes-address'
 import type { VoteDeck } from '#/platform/session-votes'
 import { buttonVariants } from './kit/button-variants'
-import { useFetchForm } from './kit/fetch-form'
+import { useFetchForm, useHydrated } from './kit/fetch-form'
 import { Icon } from './kit/icon'
 import { Alert, Notice, PostFailed } from './kit/status'
-import { Sticker } from './kit/sticker'
-import {
-  FilmCover,
-  FilmFacts,
-  LinkFilmList,
-  VotedActions,
-  VoteRule,
-} from './session-link'
+import { NewSticker, Sticker } from './kit/sticker'
+import { FilmSheet } from './film-sheet'
+import { LinkFilmList, VotedActions, VoteRule } from './session-link'
 import { PARTICIPATION } from './session-link.copy'
 import { VOTES } from './session-votes.copy'
+import { useOrder } from './vote-order'
+import { VoteRanking } from './vote-ranking'
 
-// The group swipe's deck (#182, #275): one film at a time, on its tape
-// with its facts, Não or Sim by the buttons, the arrow keys or by dragging
-// the card sideways (it follows the finger and gets the SIM or NÃO sticker
-// near the line). What a não does is said before the first card. After the
-// last film, the recap, where a tap flips a Voto, and Enviar votos, the
-// screen's one orange button, which posts every Voto at once. A screen
-// reader hears each new card. Her standing Votos on the screen go again
-// with the new ones: her latest submission is the one that counts.
+// The group swipe's deck (#182, #275, #377): one film at a time over the
+// whole screen, Tinder-like: the poster, and on a translucent band at the
+// bottom (DESIGN.md has no gradients) the title, the facts and her own
+// Nota prevista. Four gestures, by the round buttons, the arrow keys or by
+// dragging the card (it follows the finger and gets its sticker near the
+// line): left ✕ não, right ♥ sim, up ★ vi e gostei, down 👎 vi e não
+// gostei (#378). A "vi" takes the film out like a não, and tells what she
+// thought of it. A film that came in after her last Voto has the NOVO
+// sticker (#380). A tap on the card opens its full sheet (`film-sheet.tsx`),
+// where she can answer too. What each gesture does stays over the card.
+// After the last film, the recap, where a tap changes an answer, and
+// Enviar votos, the screen's one orange button, which posts every answer
+// at once; with two or more yes films, Pôr em ordem leads first to her Ordem
+// (#379, `vote-ranking.tsx`), whose Enviar votos posts it too. A screen
+// reader hears each new card. Her standing
+// Votos on the screen go again with the new ones: her latest submission is
+// the one that counts.
 
-type Vote = 'yes' | 'no'
+/** What she answers on a card: a Voto, or a Vi e gostei / Vi e não
+ * gostei. */
+type Vote = 'yes' | 'no' | 'like' | 'dislike'
+
+/** The form field each answer posts in. */
+const FIELD: Readonly<Record<Vote, string>> = {
+  yes: 'sim',
+  no: 'nao',
+  like: 'gostei',
+  dislike: 'naogostei',
+}
+
+const isSeen = (vote: Vote | undefined) => vote === 'like' || vote === 'dislike'
+
+/** How many yes films, nãos and "vi" in `votes`. */
+const tally = (votes: readonly Vote[]) => {
+  const yes = votes.filter((v) => v === 'yes').length
+  const no = votes.filter((v) => v === 'no').length
+  return [yes, no, votes.length - yes - no] as const
+}
+
+/** Where the deck is: a card up, the recap, or her Ordem. */
+type Step = 'cards' | 'recap' | 'ranking'
 
 /** How far the card must be dragged to count as a Voto, in pixels. */
 const SWIPE = 60
@@ -71,12 +100,10 @@ function useVotes(films: readonly Film[], kept: readonly Vote[] = []) {
   const cast = (vote: Vote) => {
     moved.current = true
     const next = films[votes.length + 1]
-    const cast = [...votes, vote]
-    const yes = cast.filter((v) => v === 'yes').length
     setSaid(
       next
         ? VOTES.now(votes.length + 2, films.length, next.title)
-        : VOTES.end(yes, cast.length - yes),
+        : VOTES.end(...tally([...votes, vote])),
     )
     setVotes((v) => [...v, vote].slice(0, films.length))
   }
@@ -89,60 +116,224 @@ function useVotes(films: readonly Film[], kept: readonly Vote[] = []) {
   const change = (i: number, to: Vote) =>
     setVotes((v) => v.map((vote, j) => (j === i ? to : vote)))
   const restart = () => setVotes([])
-  return { votes, said, film, heading, recap, cast, back, change, restart }
+  return {
+    votes,
+    said,
+    say: setSaid,
+    film,
+    heading,
+    recap,
+    cast,
+    back,
+    change,
+    restart,
+  }
 }
 
-/** The arrow keys vote while a card is up, outside the fields. */
+/** The arrow key of each answer. */
+const KEYS: Readonly<Record<string, Vote>> = {
+  ArrowLeft: 'no',
+  ArrowRight: 'yes',
+  ArrowUp: 'like',
+  ArrowDown: 'dislike',
+}
+
+/** The arrow keys answer while a card is up, outside the fields. */
 function useArrowKeys(active: boolean, cast: (vote: Vote) => void) {
   useEffect(() => {
     if (!active) return
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
       if (target?.closest('input, textarea, select')) return
-      if (event.key === 'ArrowLeft') cast('no')
-      else if (event.key === 'ArrowRight') cast('yes')
+      const vote = KEYS[event.key]
+      if (!vote) return
+      event.preventDefault()
+      cast(vote)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   })
 }
 
-/** The Voto a drag of `dx` pixels reaches past `line`, if any. */
-const swiped = (dx: number, line = SWIPE): Vote | null => {
+/** The answer a drag of `dx`, `dy` pixels reaches past `line`, if any:
+ * along the axis it moved most. */
+const swiped = (dx: number, dy: number, line = SWIPE): Vote | null => {
+  if (Math.abs(dy) > Math.abs(dx)) {
+    if (dy <= -line) return 'like'
+    return dy >= line ? 'dislike' : null
+  }
   if (dx >= line) return 'yes'
   return dx <= -line ? 'no' : null
 }
 
-/** The card dragged sideways: it follows the finger, gets the SIM or NÃO
- * sticker near the line, and votes past it. */
-function useSwipe(cast: (vote: Vote) => void) {
-  const [drag, setDrag] = useState(0)
-  const start = useRef<number | null>(null)
+/** How far a press may move and still be a tap, in pixels. */
+const TAP = 8
+
+const STILL = { x: 0, y: 0 }
+
+/** The card dragged: it follows the finger, gets the sticker of the
+ * answer near the line, and answers past it. A tap opens the sheet. */
+function useSwipe(cast: (vote: Vote) => void, tap: () => void) {
+  const [drag, setDrag] = useState(STILL)
+  const start = useRef<{ x: number; y: number } | null>(null)
+  const from = (event: PointerEvent) => {
+    const at = start.current ?? STILL
+    return { x: event.clientX - at.x, y: (event.clientY ?? 0) - at.y }
+  }
   const onPointerDown = (event: PointerEvent) => {
     if ((event.target as HTMLElement).closest('button')) return
-    start.current = event.clientX
+    start.current = { x: event.clientX, y: event.clientY ?? 0 }
   }
   const onPointerMove = (event: PointerEvent) => {
-    if (start.current === null || still()) return
-    setDrag(event.clientX - start.current)
+    if (start.current === null) return
+    const moved = from(event)
+    // Once it is a drag, the release may land over the bar on top of the
+    // card (a swipe up ends there): the card keeps the pointer until then.
+    // A tap keeps no pointer.
+    if (Math.hypot(moved.x, moved.y) >= TAP)
+      event.currentTarget.setPointerCapture?.(event.pointerId)
+    if (!still()) setDrag(moved)
   }
   const onPointerUp = (event: PointerEvent) => {
     if (start.current === null) return
-    const dx = event.clientX - start.current
+    const { x, y } = from(event)
     start.current = null
-    setDrag(0)
-    const vote = swiped(dx)
+    setDrag(STILL)
+    const vote = swiped(x, y)
     if (vote) cast(vote)
+    else if (Math.hypot(x, y) < TAP) tap()
   }
   const onPointerCancel = () => {
     start.current = null
-    setDrag(0)
+    setDrag(STILL)
   }
   return {
     drag,
-    stamp: swiped(drag, SWIPE * 0.6),
+    stamp: swiped(drag.x, drag.y, SWIPE * 0.6),
     handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel },
   }
+}
+
+/** What the form posts: the version, her standing Votos (a standing sim
+ * she took out from her Ordem goes as não), the deck's Votos and, from her
+ * Ordem, the yes films in order (#379). */
+function DeckFields({
+  version,
+  standing,
+  undone,
+  films,
+  votes,
+  ranking,
+}: {
+  version: number
+  standing: readonly Film[]
+  undone: ReadonlySet<string>
+  films: readonly Film[]
+  votes: readonly Vote[]
+  ranking: readonly Film[]
+}) {
+  return (
+    <>
+      <input type="hidden" name="versao" value={version} />
+      {standing.map((f) => (
+        <input
+          key={f.id}
+          type="hidden"
+          name={f.mine && !undone.has(f.id) ? FIELD[f.mine] : FIELD.no}
+          value={f.id}
+        />
+      ))}
+      {votes.map((vote, i) => (
+        <input
+          key={films[i]?.id}
+          type="hidden"
+          name={FIELD[vote]}
+          value={films[i]?.id}
+        />
+      ))}
+      {ranking.map((f) => (
+        <input key={f.id} type="hidden" name="ordem" value={f.id} />
+      ))}
+    </>
+  )
+}
+
+/** The deck's films and her Votos on them: on Mudar votos, every film,
+ * hers first and already chosen, so she opens on the recap, or on the
+ * films still without a Voto (#340); else only the ones without, and her
+ * standing Votos go again as they are. */
+function deckParts(deck: VoteDeck, revote: boolean) {
+  const voted = deck.films.filter((f) => f.mine)
+  const unvoted = deck.films.filter((f) => !f.mine)
+  return revote
+    ? {
+        films: [...voted, ...unvoted],
+        standing: [],
+        kept: voted.flatMap((f) => (f.mine ? [f.mine] : [])),
+      }
+    : { films: unvoted, standing: voted, kept: [] }
+}
+
+/** A card up, and its full sheet when she opens it; the arrow keys vote
+ * while the sheet is closed. */
+function CardStep({
+  film,
+  place,
+  total,
+  people,
+  heading,
+  cast,
+  back,
+}: {
+  film: Film
+  place: number
+  total: number
+  people: VoteDeck['people']
+  heading: RefObject<HTMLHeadingElement | null>
+  cast: (vote: Vote) => void
+  back: (() => void) | null
+}) {
+  const [sheet, setSheet] = useState(false)
+  useArrowKeys(!sheet, cast)
+  const close = () => {
+    setSheet(false)
+    heading.current?.focus()
+  }
+  return (
+    <>
+      <VoteCard
+        film={film}
+        place={place}
+        total={total}
+        viewer={people.find((p) => p.owner)?.slug ?? null}
+        heading={heading}
+        cast={cast}
+        back={back}
+        open={() => setSheet(true)}
+      />
+      {sheet && (
+        <FilmSheet
+          film={{
+            title: film.title,
+            originalTitle: film.card?.originalTitle ?? null,
+            poster: film.card?.poster ?? null,
+          }}
+          sheet={film.sheet}
+          people={people}
+          onClose={close}
+        >
+          <div className="sticky bottom-0 rounded-panel bg-case py-md">
+            <VoteButtons
+              cast={(vote) => {
+                setSheet(false)
+                cast(vote)
+              }}
+            />
+          </div>
+        </FilmSheet>
+      )}
+    </>
+  )
 }
 
 export function VoteCards({
@@ -160,24 +351,36 @@ export function VoteCards({
   action: string
   onSubmit?: FormEventHandler<HTMLFormElement>
   sending?: boolean
-  /** What goes above the cards, told whether she is on the recap, so the
-   * page's title can say so. */
-  header?: (reviewing: boolean) => ReactNode
+  /** What goes above the cards, told the step she is on, so the page's
+   * title can say so. */
+  header?: (step: Step) => ReactNode
 }) {
-  const voted = deck.films.filter((f) => f.mine)
-  const unvoted = deck.films.filter((f) => !f.mine)
-  // Mudar votos: every film, hers first and already chosen, so she opens
-  // on the recap, or on the films still without a Voto (#340).
-  const films = revote ? [...voted, ...unvoted] : unvoted
-  const standing = revote ? [] : voted
-  const kept = revote ? voted.flatMap((f) => (f.mine ? [f.mine] : [])) : []
-  const { votes, said, film, heading, recap, cast, back, change, restart } =
-    useVotes(films, kept)
-  useArrowKeys(film !== undefined, cast)
-  const reviewing = film === undefined
+  const { films, standing, kept } = deckParts(deck, revote)
+  const {
+    votes,
+    said,
+    say,
+    film,
+    heading,
+    recap,
+    cast,
+    back,
+    change,
+    restart,
+  } = useVotes(films, kept)
+  const order = useOrder({
+    deck,
+    films,
+    votes,
+    standing,
+    recap,
+    say,
+    drop: (i) => change(i, 'no'),
+  })
+  const step: Step = film ? 'cards' : order.on ? 'ranking' : 'recap'
   return (
     <>
-      {header?.(reviewing)}
+      {header?.(step)}
       <form
         method="post"
         action={action}
@@ -185,54 +388,36 @@ export function VoteCards({
         aria-busy={sending}
         className="flex flex-col gap-lg"
       >
-        <input type="hidden" name="versao" value={deck.version} />
-        {standing.map((f) => (
-          <input
-            key={f.id}
-            type="hidden"
-            name={f.mine === 'yes' ? 'sim' : 'nao'}
-            value={f.id}
-          />
-        ))}
-        {votes.map((vote, i) => (
-          <input
-            key={films[i]?.id}
-            type="hidden"
-            name={vote === 'yes' ? 'sim' : 'nao'}
-            value={films[i]?.id}
-          />
-        ))}
+        <DeckFields
+          version={deck.version}
+          standing={standing}
+          undone={order.undone}
+          films={films}
+          votes={votes}
+          ranking={step === 'ranking' ? order.films : []}
+        />
         <p role="status" className="sr-only">
           {sending ? VOTES.sending : said}
         </p>
         {film ? (
-          <>
-            <div className="flex flex-col gap-xs">
-              <VoteRule />
-              <p className="text-meta text-ink-2">
-                <span className="pointer-fine:hidden">{VOTES.hint.touch}</span>
-                <span className="hidden pointer-fine:inline">
-                  {VOTES.hint.keys}
-                </span>
-              </p>
-            </div>
-            <VoteCard
-              film={film}
-              place={votes.length + 1}
-              total={films.length}
-              heading={heading}
-              cast={cast}
-            />
-            {votes.length > 0 && (
-              <button
-                type="button"
-                onClick={back}
-                className={buttonVariants({ variant: 'link' })}
-              >
-                {VOTES.back}
-              </button>
-            )}
-          </>
+          <CardStep
+            film={film}
+            place={votes.length + 1}
+            total={films.length}
+            people={deck.people}
+            heading={heading}
+            cast={cast}
+            back={votes.length > 0 ? back : null}
+          />
+        ) : step === 'ranking' ? (
+          <VoteRanking
+            films={order.films}
+            people={deck.people}
+            sending={sending}
+            move={order.move}
+            drop={order.drop}
+            back={order.leave}
+          />
         ) : (
           <VoteRecap
             films={films}
@@ -240,8 +425,12 @@ export function VoteCards({
             sending={sending}
             heading={recap}
             change={change}
-            restart={restart}
+            restart={() => {
+              order.reset()
+              restart()
+            }}
             revote={revote}
+            rank={order.start}
           />
         )}
       </form>
@@ -249,99 +438,238 @@ export function VoteCards({
   )
 }
 
-/** One film on its tape, with its facts, Não and Sim. */
+/** The round buttons under the card, in the gestures' order: ✕ não,
+ * 👎 vi e não gostei, ★ vi e gostei, ♥ sim. The two "vi" are in the case's
+ * ink, like the JÁ VI stamp they get (yellow is only NOVO, DESIGN.md). */
+const BUTTONS = [
+  {
+    vote: 'no',
+    label: VOTES.no,
+    icon: 'close',
+    ring: 'border-sticker-pink text-sticker-pink',
+    size: 'size-16',
+  },
+  {
+    vote: 'dislike',
+    label: VOTES.dislike,
+    icon: 'thumbsDown',
+    ring: 'border-case-ink-2 text-case-ink',
+    size: 'size-13',
+  },
+  {
+    vote: 'like',
+    label: VOTES.like,
+    icon: 'star',
+    ring: 'border-case-ink text-case-ink',
+    size: 'size-13',
+  },
+  {
+    vote: 'yes',
+    label: VOTES.yes,
+    icon: 'heart',
+    ring: 'border-sticker-green text-sticker-green',
+    size: 'size-16',
+  },
+] as const
+
+/** The four round buttons, each with its word under it. Before the page
+ * hydrates they do nothing, so they wait disabled: a tap then would be
+ * lost. */
+function VoteButtons({ cast }: { cast: (vote: Vote) => void }) {
+  const live = useHydrated()
+  return (
+    <div className="flex items-end justify-center gap-lg">
+      {BUTTONS.map((button) => (
+        <button
+          key={button.vote}
+          type="button"
+          disabled={!live}
+          onClick={() => cast(button.vote)}
+          className="flex cursor-pointer flex-col items-center gap-xs font-display text-control text-case-ink disabled:cursor-default disabled:opacity-60"
+        >
+          <span
+            className={`grid ${button.size} place-items-center rounded-full border-2 bg-case/70 ${button.ring}`}
+          >
+            <Icon name={button.icon} className="size-7" />
+          </span>
+          {button.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** The poster over the whole card; without one (or when it fails to
+ * load), the title big on the case. Decorative: the title is written
+ * below it. */
+function PosterFill({
+  poster,
+  title,
+}: {
+  poster: string | null
+  title: string
+}) {
+  const [broken, setBroken] = useState(false)
+  const image = useRef<HTMLImageElement>(null)
+  useEffect(() => {
+    const img = image.current
+    if (img?.complete && img.naturalWidth === 0) setBroken(true)
+  }, [])
+  return poster && !broken ? (
+    <img
+      ref={image}
+      src={poster.replace('/w342/', '/w780/')}
+      alt=""
+      onError={() => setBroken(true)}
+      draggable={false}
+      className="absolute inset-0 size-full object-cover"
+    />
+  ) : (
+    <span
+      aria-hidden="true"
+      className="absolute inset-x-lg top-[18%] text-center font-display text-page-title text-balance text-case-ink-2"
+    >
+      {title}
+    </span>
+  )
+}
+
+/** "2012 · 1h44 · IMDb 7,6 · previsto 8,3": the year, the runtime, the
+ * IMDb rating and her own Nota prevista. */
+function cardFacts(film: Film, viewer: string | null): string[] {
+  const { card } = film
+  const own = film.sheet?.predictedRatings.find((p) => p.person === viewer)
+  return [
+    ...(card?.year ? [String(card.year)] : []),
+    ...(card?.duration ? [card.duration] : []),
+    ...(card?.imdbRating ? [VOTES.imdb(card.imdbRating)] : []),
+    ...(own ? [VOTES.predicted(own.text)] : []),
+  ]
+}
+
+/** The sticker a card dragged near each line gets: SIM green, NÃO the
+ * pink of TROCAR (a não is one), and the two "vi" the JÁ VI one. */
+const STAMPS = {
+  yes: { kind: 'yes', text: VOTES.stampYes },
+  no: { kind: 'swap', text: VOTES.stampNo },
+  like: { kind: 'seen', text: VOTES.stampLike },
+  dislike: { kind: 'seen', text: VOTES.stampDislike },
+} as const
+
+/** One film over the whole screen, Tinder-like: the poster, and over a
+ * translucent band at the bottom its title and facts, the way to its full sheet
+ * and the buttons. A tap on the card opens the sheet too. */
 function VoteCard({
   film,
   place,
   total,
+  viewer,
   heading,
   cast,
+  back,
+  open,
 }: {
   film: Film
   place: number
   total: number
+  /** Whoever looks, whose Nota prevista the card shows. */
+  viewer: string | null
   heading: RefObject<HTMLHeadingElement | null>
   cast: (vote: Vote) => void
+  /** Back to the previous card, from the second on. */
+  back: (() => void) | null
+  open: () => void
 }) {
-  const { drag, stamp, handlers } = useSwipe(cast)
+  const { drag, stamp, handlers } = useSwipe(cast, open)
+  const titleId = useId()
+  const moved = drag.x !== 0 || drag.y !== 0
   return (
-    <article
-      aria-labelledby="carta"
-      {...handlers}
-      style={
-        drag === 0
-          ? undefined
-          : {
-              transform: `translateX(${drag}px) rotate(${drag * TURN}deg)`,
-            }
-      }
-      className="relative grid touch-pan-y gap-lg rounded-card border border-rule bg-surface p-lg select-none min-[560px]:grid-cols-[200px_1fr]"
-    >
-      <div className="relative mx-auto w-[60%] max-w-[220px] min-[560px]:w-full">
-        <FilmCover
-          poster={film.card?.poster ?? null}
-          title={film.title}
-          eager
-          className="w-full"
-        />
-        {stamp && (
-          <Sticker
-            kind={stamp === 'yes' ? 'yes' : 'swap'}
-            className="absolute -top-xs -right-sm"
-          >
-            {stamp === 'yes' ? VOTES.stampYes : VOTES.stampNo}
-          </Sticker>
-        )}
-      </div>
-      <div className="flex min-w-0 flex-col gap-md">
-        <p className="text-meta text-ink-2 tabular-nums">
-          {VOTES.of(place, total)}
-        </p>
-        <div className="flex flex-col gap-xs">
-          <h2
-            id="carta"
-            ref={heading}
-            tabIndex={-1}
-            className="font-display text-title text-balance"
-          >
-            {film.title}
-          </h2>
-          {film.card?.originalTitle && (
-            <p className="text-meta text-ink-2">{film.card.originalTitle}</p>
+    <>
+      <article
+        aria-labelledby={titleId}
+        {...handlers}
+        style={
+          moved
+            ? {
+                transform: `translate(${drag.x}px, ${drag.y}px) rotate(${drag.x * TURN}deg)`,
+              }
+            : undefined
+        }
+        className="fixed inset-0 z-30 flex touch-none flex-col overflow-hidden bg-case text-case-ink select-none"
+      >
+        <PosterFill poster={film.card?.poster ?? null} title={film.title} />
+        <div className="relative mt-auto flex flex-col gap-md bg-case/85 px-lg pt-lg pb-tab-safe">
+          {stamp && (
+            <Sticker kind={STAMPS[stamp].kind} className="self-start">
+              {STAMPS[stamp].text}
+            </Sticker>
+          )}
+          <div className="mx-auto flex w-full max-w-[640px] flex-col gap-md">
+            <div className="flex flex-col gap-2xs">
+              <div className="flex items-start justify-between gap-md">
+                <h2
+                  id={titleId}
+                  ref={heading}
+                  tabIndex={-1}
+                  className="font-display text-page-title text-balance"
+                >
+                  {film.title}
+                </h2>
+                {/* A film that came in after her last Voto (#380). */}
+                {film.new && <NewSticker className="mt-xs shrink-0" />}
+              </div>
+              {film.card?.originalTitle && (
+                <p className="text-meta text-case-ink-2">
+                  {film.card.originalTitle}
+                </p>
+              )}
+              <p className="text-meta text-case-ink-2 tabular-nums">
+                {cardFacts(film, viewer).join(' · ')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={open}
+              className={buttonVariants({
+                variant: 'link',
+                className: 'min-h-touch self-start text-case-ink',
+              })}
+            >
+              {VOTES.more}
+            </button>
+            <VoteButtons cast={cast} />
+            <p className="text-center text-meta text-case-ink-2">
+              <span className="pointer-fine:hidden">{VOTES.hint.touch}</span>
+              <span className="hidden pointer-fine:inline">
+                {VOTES.hint.keys}
+              </span>
+            </p>
+          </div>
+        </div>
+      </article>
+      {/* Over the card and still while it moves: where she is in the deck,
+       * the way back and what a não does. */}
+      <div className="fixed inset-x-0 top-0 z-30 flex flex-col gap-xs bg-case/75 px-lg pt-top-safe pb-sm text-meta text-case-ink">
+        <div className="mx-auto flex w-full max-w-[640px] items-center justify-between gap-md">
+          <p className="tabular-nums">{VOTES.of(place, total)}</p>
+          {back && (
+            <button
+              type="button"
+              onClick={back}
+              className={buttonVariants({
+                variant: 'link',
+                className: 'min-h-touch text-case-ink',
+              })}
+            >
+              {VOTES.back}
+            </button>
           )}
         </div>
-        <FilmFacts film={film} />
-        {film.card?.synopsis && (
-          <p className="line-clamp-3 max-w-[60ch] text-synopsis text-pretty">
-            {film.card.synopsis}
-          </p>
-        )}
-        <div className="grid grid-cols-2 gap-sm">
-          <button
-            type="button"
-            onClick={() => cast('no')}
-            className={buttonVariants({
-              variant: 'option',
-              className: 'border-2 border-sticker-pink',
-            })}
-          >
-            <Icon name="close" className="size-[18px]" />
-            {VOTES.no}
-          </button>
-          <button
-            type="button"
-            onClick={() => cast('yes')}
-            className={buttonVariants({
-              variant: 'option',
-              className: 'border-2 border-sticker-green',
-            })}
-          >
-            <Icon name="check" className="size-[18px]" />
-            {VOTES.yes}
-          </button>
+        <div className="mx-auto w-full max-w-[640px]">
+          <VoteRule />
         </div>
       </div>
-    </article>
+    </>
   )
 }
 
@@ -355,6 +683,7 @@ function VoteRecap({
   change,
   restart,
   revote,
+  rank,
 }: {
   films: readonly Film[]
   votes: readonly Vote[]
@@ -364,9 +693,12 @@ function VoteRecap({
   restart: () => void
   /** Mudar votos: her earlier Votos are the ones chosen. */
   revote: boolean
+  /** Leads to her Ordem, with two or more yes films; else the recap sends. */
+  rank: (() => void) | null
 }) {
-  const yes = votes.filter((v) => v === 'yes').length
-  const leaving = films.filter((_, i) => votes[i] === 'no').map((f) => f.title)
+  const leaving = films
+    .filter((_, i) => votes[i] === 'no' || isSeen(votes[i]))
+    .map((f) => f.title)
   return (
     <>
       <div className="flex flex-col gap-xs">
@@ -375,7 +707,7 @@ function VoteRecap({
           tabIndex={-1}
           className="font-display text-step-title"
         >
-          {VOTES.summary(yes, votes.length - yes)}
+          {VOTES.summary(...tally(votes))}
         </h2>
         <p className="text-meta text-ink-2">
           {revote ? VOTES.kept : VOTES.recap}
@@ -396,9 +728,20 @@ function VoteRecap({
         <p className="font-display font-bold">{VOTES.leaving(leaving)}</p>
       )}
       <div className="flex flex-wrap items-center gap-lg">
-        <button type="submit" className={buttonVariants()} disabled={sending}>
-          {sending ? VOTES.sending : VOTES.send}
-        </button>
+        {rank ? (
+          <button
+            type="button"
+            onClick={rank}
+            className={buttonVariants()}
+            disabled={sending}
+          >
+            {VOTES.rankStart}
+          </button>
+        ) : (
+          <button type="submit" className={buttonVariants()} disabled={sending}>
+            {sending ? VOTES.sending : VOTES.send}
+          </button>
+        )}
         <button
           type="button"
           onClick={restart}
@@ -412,24 +755,41 @@ function VoteRecap({
   )
 }
 
-/** The options of a recap row, Não first as on the card. */
+/** The options of a recap row, in the buttons' order. The two "vi" show
+ * a short word; their name is the whole gesture. Chosen, both look like
+ * the JÁ VI stamp. */
 const CHOICES = [
   {
     vote: 'no',
     label: VOTES.no,
     icon: 'close',
-    on: 'border-sticker-pink bg-sticker-pink',
+    on: 'border-sticker-pink bg-sticker-pink text-on-sticker',
+  },
+  {
+    vote: 'dislike',
+    label: VOTES.dislike,
+    short: VOTES.recapDisliked,
+    icon: 'thumbsDown',
+    on: 'border-ink bg-surface text-ink',
+  },
+  {
+    vote: 'like',
+    label: VOTES.like,
+    short: VOTES.recapLiked,
+    icon: 'star',
+    on: 'border-ink bg-surface text-ink',
   },
   {
     vote: 'yes',
     label: VOTES.yes,
     icon: 'check',
-    on: 'border-sticker-green bg-sticker-green',
+    on: 'border-sticker-green bg-sticker-green text-on-sticker',
   },
 ] as const
 
-/** A film of the recap with her Voto as a two-way switch: the chosen side
- * is filled in its sticker colour, and a tap on the other changes it. */
+/** A film of the recap with her answer as a four-way switch: the chosen
+ * one is filled in its colour, and a tap on another changes it. On a
+ * phone the switch goes under the title. */
 function RecapRow({
   title,
   vote,
@@ -442,7 +802,7 @@ function RecapRow({
   onChange: (to: Vote) => void
 }) {
   return (
-    <li className="flex items-center justify-between gap-md border-b border-rule py-sm last:border-b-0">
+    <li className="flex flex-wrap items-center justify-between gap-x-md gap-y-xs border-b border-rule py-sm last:border-b-0">
       <span className="min-w-0 font-display">{title}</span>
       <div
         role="group"
@@ -458,10 +818,11 @@ function RecapRow({
               aria-pressed={chosen}
               disabled={sending}
               onClick={() => onChange(choice.vote)}
-              className={`inline-flex min-h-touch min-w-[72px] cursor-pointer items-center justify-center gap-xs rounded-pill border-2 px-sm font-display text-control disabled:cursor-default disabled:opacity-60 ${chosen ? `${choice.on} text-on-sticker font-bold` : 'border-transparent text-ink-2 hover:text-ink'}`}
+              aria-label={'short' in choice ? choice.label : undefined}
+              className={`inline-flex min-h-touch min-w-[56px] cursor-pointer items-center justify-center gap-xs rounded-pill border-2 px-sm font-display text-control disabled:cursor-default disabled:opacity-60 ${chosen ? `${choice.on} font-bold` : 'border-transparent text-ink-2 hover:text-ink'}`}
             >
               <Icon name={choice.icon} className="size-[18px]" />
-              {choice.label}
+              {'short' in choice ? choice.short : choice.label}
             </button>
           )
         })}
@@ -648,10 +1009,14 @@ export function VoteScreen({
   }
   const screen = screenOf(deck, search, failed)
   const sent = Boolean(feito) && !failed
-  const header = (reviewing: boolean) => (
+  const header = (step: Step) => (
     <>
       <h1 id="votar" className="font-display text-page-title text-balance">
-        {reviewing ? VOTES.review : screenTitle(screen, deck, sent, erro)}
+        {step === 'recap'
+          ? VOTES.review
+          : step === 'ranking'
+            ? VOTES.rankPage
+            : screenTitle(screen, deck, sent, erro)}
       </h1>
       {sent && feito && <Notice>{VOTES.notices[feito]}</Notice>}
       {refusal && <Alert>{VOTES.refusals[refusal](owner)}</Alert>}
@@ -661,7 +1026,7 @@ export function VoteScreen({
   const voting = screen === 'vote' && deck !== null
   return (
     <section aria-labelledby="votar" className="flex flex-col gap-lg">
-      {!voting && header(false)}
+      {!voting && header('cards')}
       {screen === 'stuck' && <BackToList home={home} plain />}
       {screen === 'none' && <BackToList home={home} plain={false} />}
       {screen === 'vote' && deck && (

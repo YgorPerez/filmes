@@ -35,6 +35,7 @@ import {
 } from '@filmes/engine'
 import type { ReplyRefusal, SessionNotice } from '#/content/billboard-reply'
 import type { SessionLinkSearch } from '#/content/session-link-address'
+import { ownVotePath } from '#/content/session-votes-address'
 import { appEngine } from './engine'
 import { appPoster, failureOf, formPoster, seeOther } from './form-post'
 import { appNotes, type Note, type Notes } from './notes'
@@ -182,6 +183,9 @@ export type CartazPage = {
   /** What the reading made of the acrescentar (#200). */
   reading?: PageReading
   sessionLink?: string | null
+  /** Her own swipe on the link, for the Cartaz's Votar (#376): only for
+   * the Dono who opened the Session and is among the Presentes. */
+  voteLink?: string | null
   deletion?: { hasFacts: boolean }
   /** The Presentes' Perguntas par a par that wait for the Dono (#181). */
   pairwise?: ReadonlyArray<WaitingAnswers>
@@ -306,35 +310,56 @@ export async function appCartazPage(
   // next Nova Sessão show that.
   if (!page.session.open) return page
   const { APP_ORIGIN, AUTH_DATABASE_PATH } = serverEnv()
+  const sessionLink = await issueSessionLink(
+    id,
+    viewer,
+    engine,
+    AUTH_DATABASE_PATH,
+    APP_ORIGIN,
+  )
+  const ownerAttends = page.session.attendees.some((person) => person.owner)
   return {
     ...page,
-    sessionLink: await issueSessionLink(
-      id,
-      viewer,
-      engine,
-      AUTH_DATABASE_PATH,
-      APP_ORIGIN,
-    ),
+    sessionLink,
+    voteLink:
+      sessionLink && ownerAttends ? ownVotePath(sessionLink, viewer) : null,
   }
 }
 
-/** The public page of a Link da Sessão, for the app. */
-export const appSessionLink = (search: SessionLinkSearch) =>
-  resolveSessionLink(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
+/** The public page of a Link da Sessão, for the app, as `viewer` (the
+ * logged-in Dono's Pessoa, or null) opens it. */
+export const appSessionLink = (
+  search: SessionLinkSearch,
+  viewer: string | null,
+) =>
+  resolveSessionLink(
+    search,
+    appEngine(),
+    serverEnv().AUTH_DATABASE_PATH,
+    viewer,
+  )
 
 /** A link issued for a Session that closed since (#275), for the app. */
 export const appClosedSessionLink = (search: SessionLinkSearch) =>
   closedSessionLink(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
 
-/** The group swipe's deck (#182), for the app. */
+/** The group swipe's deck (#182), for the app, as `viewer` opens it. */
 export const appVoteDeck = (
   search: SessionLinkSearch & { fora?: string | undefined },
-) => voteDeck(search, appEngine(), serverEnv().AUTH_DATABASE_PATH)
+  viewer: string | null,
+) => voteDeck(search, appEngine(), serverEnv().AUTH_DATABASE_PATH, viewer)
 
-/** The group swipe's post (#182), for the app. */
+/** The group swipe's post (#182), for the app: the logged-in Dono, if
+ * any, is who may vote as the opener (#376). */
 export const serveVotes = (request: Request) => {
-  const { AUTH_DATABASE_PATH, APP_ORIGIN } = serverEnv()
-  return voteAction(request, appEngine(), AUTH_DATABASE_PATH, APP_ORIGIN)
+  const { owner, origin } = appPoster(request)
+  return voteAction(
+    request,
+    appEngine(),
+    serverEnv().AUTH_DATABASE_PATH,
+    origin,
+    owner?.person ?? null,
+  )
 }
 
 /** The reply's route for the app. */
