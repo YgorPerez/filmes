@@ -503,6 +503,8 @@ test('a guest’s vi takes the film out and waits for the Dono; the Dono’s lan
         engine,
         database,
         ORIGIN,
+        // Only the logged-in Dono votes as the opener (#376).
+        presente === 'bruno' ? 'bruno' : null,
       )
     const done = (r: Response) =>
       new URL(r.headers.get('location') ?? '', ORIGIN).searchParams.get('feito')
@@ -512,6 +514,7 @@ test('a guest’s vi takes the film out and waits for the Dono; the Dono’s lan
           sessionLinkSearch({ ...link, presente: 'bruno' }),
           engine,
           database,
+          'bruno',
         )
       )?.films.map((f) => f.id)
 
