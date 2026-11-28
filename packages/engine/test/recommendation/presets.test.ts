@@ -4,11 +4,7 @@
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vite-plus/test'
-import {
-  ADDITION_FIELDS,
-  readPresets,
-  readRequest,
-} from '../../src/index.ts'
+import { ADDITION_FIELDS, readPresets, readRequest } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 
 const PRESETS = `
@@ -27,7 +23,7 @@ language = "fr"
 no_slow = true
 `
 
-const withPresets = (toml = PRESETS): Fixture => {
+const useFixtureWithPresets = (toml = PRESETS): Fixture => {
   const fixture = useFixture()
   writeFileSync(join(fixture.config, 'presets.toml'), toml)
   return fixture
@@ -41,7 +37,7 @@ describe('presets.toml', () => {
   })
 
   test('each Programa in the file order, its Climas as moods.toml spells them', async () => {
-    const presets = await withPresets().ok(readPresets)
+    const presets = await useFixtureWithPresets().ok(readPresets)
 
     expect(presets).toEqual([
       {
@@ -78,7 +74,7 @@ describe('presets.toml', () => {
     ['a Restrição that makes no sense', 'child = 30', '--crianca'],
     ['a value of the wrong kind', 'unseen = "sim"', 'unseen'],
   ])('%s is invalid_config', async (_, line, message) => {
-    const fixture = withPresets(`[Encontro]\n${line}\n`)
+    const fixture = useFixtureWithPresets(`[Encontro]\n${line}\n`)
 
     const outcome = await fixture.run(readPresets)
 
@@ -86,14 +82,16 @@ describe('presets.toml', () => {
       exitCode: 1,
       output: { error: { code: 'invalid_config' } },
     })
-    expect(JSON.stringify(outcome.output)).toContain("presets.toml ['Encontro']")
+    expect(JSON.stringify(outcome.output)).toContain(
+      "presets.toml ['Encontro']",
+    )
     expect(JSON.stringify(outcome.output)).toContain(message)
   })
 })
 
 describe('the Leitura do pedido reads a Programa', () => {
   test('its name is its Climas and Restrições', async () => {
-    const reading = await withPresets().ok(
+    const reading = await useFixtureWithPresets().ok(
       readRequest({ text: 'encontro com a Iara' }),
     )
 
@@ -105,17 +103,15 @@ describe('the Leitura do pedido reads a Programa', () => {
       noSlow: true,
       attendees: ['iara'],
     })
-    expect(reading.understood.map((i) => [i.field, i.words, i.label])).toEqual(
-      [
-        ['preset', 'encontro', 'Programa: Encontro'],
-        ['attendees', 'Iara', 'Presente: Iara'],
-      ],
-    )
+    expect(reading.understood.map((i) => [i.field, i.words, i.label])).toEqual([
+      ['preset', 'encontro', 'Programa: Encontro'],
+      ['attendees', 'Iara', 'Presente: Iara'],
+    ])
     expect(reading.notUnderstood).toEqual([])
   })
 
   test('a longer name wins over the words in it', async () => {
-    const reading = await withPresets().ok(
+    const reading = await useFixtureWithPresets().ok(
       readRequest({ text: 'Noite com as criancas, pra rir' }),
     )
 
@@ -130,7 +126,7 @@ describe('the Leitura do pedido reads a Programa', () => {
   })
 
   test('a Clima of its own joins the Programa’s', async () => {
-    const reading = await withPresets().ok(
+    const reading = await useFixtureWithPresets().ok(
       readRequest({ text: 'encontro, algo tenso' }),
     )
 
@@ -138,7 +134,7 @@ describe('the Leitura do pedido reads a Programa', () => {
   })
 
   test('the Cartaz’s Acrescentar reads it too', async () => {
-    const reading = await withPresets().ok(
+    const reading = await useFixtureWithPresets().ok(
       readRequest({ text: 'encontro', fields: ADDITION_FIELDS }),
     )
 

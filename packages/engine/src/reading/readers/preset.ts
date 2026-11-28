@@ -17,7 +17,8 @@ export const presetReader: Reader = {
   read: (words) =>
     Effect.gen(function* () {
       const table = (yield* readPresets).map(
-        (preset) => [phraseOf(preset.name), preset] as readonly [Phrase, typeof preset],
+        (preset) =>
+          [phraseOf(preset.name), preset] as readonly [Phrase, typeof preset],
       )
       return scan(words, (i) => {
         const best = longestOf(words, i, table)

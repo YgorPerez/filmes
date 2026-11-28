@@ -393,7 +393,7 @@ describe('“Ler” in sessionRequestAction', () => {
 })
 
 /** The fixture with its own Programas, so the shipped ones can change. */
-const withPresets = () => {
+const useFixtureWithPresets = () => {
   const fixture = useFixture()
   writeFileSync(
     join(fixture.config, 'presets.toml'),
@@ -405,7 +405,7 @@ const withPresets = () => {
 describe('a Programa’s chip in sessionRequestAction (#402)', () => {
   it('goes back to the form with the Programa’s Climas and Restrições on top of what the Dono set', async () => {
     const { location, draft } = await readForm(
-      withPresets(),
+      useFixtureWithPresets(),
       [...BASIC, ['climas', 'tenso'], ['duracao', '90'], ['pedido', 'oi']],
       'bruno',
       ['programa', 'Encontro'],
@@ -428,7 +428,7 @@ describe('a Programa’s chip in sessionRequestAction (#402)', () => {
 
   it('leaves the form as it was for a name no Programa has', async () => {
     const { draft } = await readForm(
-      withPresets(),
+      useFixtureWithPresets(),
       [...BASIC, ['climas', 'tenso']],
       'bruno',
       ['programa', 'Noite antiga'],
