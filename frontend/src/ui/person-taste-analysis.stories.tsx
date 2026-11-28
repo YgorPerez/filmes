@@ -19,10 +19,14 @@ type Story = StoryObj<typeof meta>
 export const AnotherPessoa: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(
-      canvas.getByText(TASTE_ANALYSIS.item('Helena Prado', 4.5, 3)),
-    )
-    await expect(canvas.getByText('O Farol de Areia (2012)')).toBeVisible()
+    const item = canvas.getByText(TASTE_ANALYSIS.item('Helena Prado', 4.5, 3))
+    await userEvent.click(item)
+    // The same film can sit under several items: look inside this one.
+    const fold = item.closest('details')
+    if (fold === null) throw new Error('the item is not a fold')
+    await expect(
+      within(fold).getByText('O Farol de Areia (2012)'),
+    ).toBeVisible()
   },
 }
 

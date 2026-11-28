@@ -101,8 +101,7 @@ const median = (sorted: ReadonlyArray<number>): number => {
 }
 
 const byRating = (a: TasteFilm, b: TasteFilm) =>
-  b.rating - a.rating ||
-  (a.title ?? a.filmId).localeCompare(b.title ?? b.filmId)
+  b.rating - a.rating || a.filmId.localeCompare(b.filmId)
 
 /** The items of `links` (film, key, label) above `middle`, the furthest
  * above first. */
@@ -138,9 +137,7 @@ const above = (
     .filter(({ excess }) => excess > 0)
     .toSorted(
       (a, b) =>
-        b.excess - a.excess ||
-        b.item.count - a.item.count ||
-        a.item.label.localeCompare(b.item.label),
+        b.excess - a.excess || a.item.label.localeCompare(b.item.label),
     )
     .slice(0, TOP)
     .map(({ item }) => item)
