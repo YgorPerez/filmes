@@ -5,6 +5,7 @@
 // (`session-request.ts`) without the Presentes and the Regra. Shared by the
 // page and the server, so nothing here imports the engine.
 
+import { sessionPath } from './session-paths'
 import { SESSION_REQUEST_REFUSALS } from './session-request'
 
 /** Why not, in `?erro=`: the form's own, and the Session that was told
@@ -21,8 +22,7 @@ export const isSessionEditRefusal = (
   (SESSION_EDIT_REFUSALS as readonly unknown[]).includes(value)
 
 /** Where the edit form goes back to: the Session's page (`sessionPath`). */
-export const sessionEditBack = (id: string) =>
-  `/sessoes/${encodeURIComponent(id)}`
+export const sessionEditBack = sessionPath
 
 /** The address the edit form lives at. */
 export const sessionEditPath = (id: string) => `${sessionEditBack(id)}/pedido`

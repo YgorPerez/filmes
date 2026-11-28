@@ -1,6 +1,6 @@
 import { deleteSession } from '@filmes/engine'
 import { z } from 'zod'
-import { defineTool, sessionId } from '../tool.ts'
+import { asRequestOwner, defineTool, sessionId } from '../tool.ts'
 
 export default defineTool({
   name: 'delete_session',
@@ -26,5 +26,5 @@ export default defineTool({
         'a escolha do Dono: keep_taste (manter o gosto) ou erase (apagar tudo)',
       ),
   }),
-  run: ({ session, mode }) => deleteSession({ session, mode }),
+  run: ({ session, mode }) => asRequestOwner(deleteSession({ session, mode })),
 })

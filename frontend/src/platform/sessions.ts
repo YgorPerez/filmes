@@ -25,6 +25,7 @@ import {
 } from '@filmes/engine'
 import { field, searchAsked } from '#/content/form-fields'
 import {
+  sessionEditBack,
   sessionEditPath,
   type SessionEditRefusal,
 } from '#/content/session-edit'
@@ -36,6 +37,7 @@ import {
   type SessionRequestRefusal,
 } from '#/content/session-request'
 import { appEngine } from './engine'
+import { logEngineError } from './engine-log'
 import { appEdits, type SessionEdits } from './session-edit'
 import { attendeeSlugs, sessionFilms, type SessionFilm } from './session-fields'
 import { appPoster, failureOf, formPoster, seeOther } from './form-post'
@@ -167,13 +169,6 @@ export function sessionsFromEngine(
     },
     read: (text, owner) => run(readRequest({ text }), { owner }),
   }
-}
-
-/** An engine error the Dono cannot fix from the page goes to the server log
- * (`docker logs`), so whoever runs the server sees why. */
-function logEngineError(outcome: { output: ErrorOutput }): void {
-  const { code, message } = outcome.output.error
-  console.error(`engine: ${code}: ${message}`)
 }
 
 /** The outcome's value, or null (logged) when the engine failed. */
@@ -382,16 +377,10 @@ export const appRepeatDraft = async (id: string, viewer: string) => {
 
 /** Why the engine refused the edit. */
 function editRefusalOf(outcome: { output: ErrorOutput }): SessionEditRefusal {
-  const { code, message } = outcome.output.error
-  switch (code) {
-    case 'closed_session':
-      return 'fechada'
-    case 'invalid_usage':
-      return message.startsWith('--parecido') ? 'parecido' : 'pedido'
-    default:
-      logEngineError(outcome)
-      return failureOf(outcome)
-  }
+  const { code, reason } = outcome.output.error
+  if (code === 'closed_session') return 'fechada'
+  if (reason === 'not_attending') return 'ausente'
+  return refusalOf(outcome)
 }
 
 /** `POST /sessoes/<id>/pedido/enviar`: redoes Session `id` with the form
@@ -413,9 +402,6 @@ export async function sessionEditAction(
     seeOther(`${sessionEditPath(id)}?erro=${why}`)
   const parsed = parseSessionEdit(await request.formData())
   if ('refused' in parsed) return back(parsed.refused)
-  const draft = await edits.draft(id)
-  if (draft.exitCode !== 0) return back(editRefusalOf(draft))
-  if (!draft.output.attendees.includes(poster.person)) return back('ausente')
   const done = await edits.edit(id, parsed.ok, poster.person)
   if (done.exitCode !== 0) return back(editRefusalOf(done))
   const token = notes.remember({
@@ -423,7 +409,7 @@ export async function sessionEditAction(
     addition: null,
   })
   return seeOther(
-    `/sessoes/${encodeURIComponent(id)}?feito=regerada${token ? `&nota=${token}` : ''}`,
+    `${sessionEditBack(id)}?feito=regerada${token ? `&nota=${token}` : ''}`,
   )
 }
 

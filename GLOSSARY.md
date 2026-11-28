@@ -24,8 +24,8 @@ _Evitar_: conta, permissão
 Um encontro para ver um filme. Nasce no pedido do Dono, guarda os Presentes, o contexto, a Recomendação e o Filme escolhido, e fecha quando o Feedback é registrado. Sessão sem Feedback fica aberta.
 _Evitar_: pedido, noite, rolê
 
-**Sessão excluída** [deleted session, `deletedOn`]:
-Sessão que saiu da lista, da Satisfação e do Histórico de apostas. Quando o Dono escolhe manter o gosto, o arquivo leva `deleted_on` e os Fatos que guardam o gosto continuam valendo com a Sessão como Fonte. O Link da Sessão avisa da exclusão (#370).
+**Sessão excluída** [deleted session, `deletedOn`; Manter o gosto [keep taste, `keep_taste`, `keepTaste`]; Apagar tudo [erase, `erase`]]:
+Sessão que saiu da lista, da Satisfação e do Histórico de apostas. Só um Dono entre os Presentes a exclui. Com Fatos da Sessão, ele escolhe entre Manter o gosto e Apagar tudo. Manter o gosto deixa o arquivo com `deleted_on`, e os Fatos que guardam o gosto continuam valendo com a Sessão como Fonte. Apagar tudo tira o arquivo, os Fatos da Sessão e o Já visto e o Declarado marcados no Cartaz, e deixa no lugar do arquivo o marcador `<id>.deleted`, que reserva o ID. O Link da Sessão avisa da exclusão nos dois casos (#370).
 
 **Link da Sessão** [session link, `sessionLink`]:
 O endereço que o Dono da Sessão compartilha com os Presentes. Cada Presente se identifica pelo nome e pode participar enquanto a Sessão estiver aberta, sem login. O link dá acesso aos filmes da versão atual e às interações da Sessão, sem expor o gosto das Pessoas (#180).
@@ -117,7 +117,7 @@ Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesm
 _Evitar_: rodada, tentativa
 
 **Mantido** [kept, `kept`]:
-Um filme da versão anterior que o Dono quer na próxima. Ao regerar, ocupa um dos números dos Mantidos, em ordem de Votos, e só as vagas ganham filme novo. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
+Um filme da versão anterior que o Dono quer na próxima. Ao regerar, ocupa um dos números dos Mantidos, em ordem de Votos, e só as vagas ganham filme novo. Na edição da Sessão (dos Presentes ou do pedido), cada Mantido fica no próprio número. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
 _Evitar_: fixado, travado
 
 **Cartaz** [billboard, `Billboard`]:

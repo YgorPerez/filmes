@@ -55,6 +55,7 @@ import type { Environment } from '../runtime/Environment.ts'
 import { Owner } from '../runtime/Owner.ts'
 import { Run } from '../runtime/Run.ts'
 import { Sqlite, type SqliteError } from '../sqlite/Sqlite.ts'
+import { attendingOwner } from './attending-owner.ts'
 import { recordBetMarks } from './bet-record.ts'
 import { syncSession } from './database.ts'
 import { sessionOwner } from './feedback.ts'
@@ -81,6 +82,9 @@ import {
 import { readRefillComments, refillConstraints } from './refill-comments.ts'
 import { sessionRedoRequest } from './redo-request.ts'
 import { shortfallOf } from './shortfall.ts'
+
+/** An edit of a version that is no longer the current one. */
+const STALE_EDIT = 'a Sessão mudou; tente de novo'
 
 /** The Session's frontmatter, or an error if it does not exist or already
  * has Feedback (`conferir_aberta`). */
@@ -213,13 +217,9 @@ export const redoSession = (
           const read = yield* openSessionFront(id)
           if (
             expectedVersion !== undefined &&
-            Number(yamlToJson(currentVersion(read).get('version') ?? null)) !==
-              expectedVersion
+            versionNumber(read) !== expectedVersion
           )
-            return yield* engineError(
-              'invalid_usage',
-              'a Sessão mudou; tente de novo',
-            )
+            return yield* engineError('invalid_usage', STALE_EDIT)
           const front = new Map<string, YamlValue>(read)
           const names = new Map(
             (yield* db.all('SELECT slug, nome FROM pessoas ORDER BY slug')).map(
@@ -261,7 +261,7 @@ const prepareRedo = (
     readonly keep: ReadonlyArray<string>
     readonly asking: RecommendSessionRequest
     readonly asked: ReadonlyArray<Constraint>
-    readonly preservePositions: boolean
+    readonly expectedVersion: number | undefined
   },
 ) =>
   Effect.gen(function* () {
@@ -293,14 +293,14 @@ const prepareRedo = (
       keep,
       requestIds(asking.swap),
     )
-    const prepared = prepareRegenerate(
-      front,
+    const prepared = prepareRegenerate(front, {
       keep,
       swapped,
       replacing,
       newMood,
-      start.preservePositions,
-    )
+      // An edit of the Session keeps each Mantido at its own number.
+      preservePositions: start.expectedVersion !== undefined,
+    })
     warnings.push(...prepared.warnings)
     return { asking, asked, regenerate: prepared.regenerate, warnings }
   })
@@ -318,7 +318,7 @@ const sessionRequest = (
   request: RecommendSessionRequest,
   session: string | undefined,
   keep: ReadonlyArray<string>,
-  preservePositions: boolean,
+  expectedVersion: number | undefined,
 ): Effect.Effect<
   {
     readonly asking: RecommendSessionRequest
@@ -353,7 +353,7 @@ const sessionRequest = (
       keep,
       asking,
       asked,
-      preservePositions,
+      expectedVersion,
     })
     const comments = request.refillComments
     if (!comments?.length) return redo
@@ -393,12 +393,7 @@ const recommendInSession = (
           )
         : []
     const { asking, asked, regenerate, warnings, refillMoods, refillOnly } =
-      yield* sessionRequest(
-        request,
-        session,
-        keep,
-        expectedVersion !== undefined,
-      )
+      yield* sessionRequest(request, session, keep, expectedVersion)
     const count = asking.count ?? requested
     // The Aposta's draws come from the Session id (#178).
     const rankedWithRelaxed = yield* rankRequest(
@@ -443,6 +438,26 @@ const recommendInSession = (
 export const recommendSession = (request: RecommendSessionRequest) =>
   recommendInSession(request)
 
+/** The number of the Session's current version. */
+const versionNumber = (front: YamlMapping): number =>
+  Number(yamlToJson(currentVersion(front).get('version') ?? null))
+
+/** Redoes open Session `id` (`request.session`) as an edit of it (map
+ * #369): only a Dono among its Presentes edits, each Mantido stays at its
+ * own number, and the redo refuses when the Session is no longer at
+ * `version` (the current one, by default). */
+export const editSession = (
+  front: YamlMapping,
+  request: RecommendSessionRequest,
+  version: number = versionNumber(front),
+) =>
+  Effect.gen(function* () {
+    yield* attendingOwner(front, 'editar')
+    if (version !== versionNumber(front))
+      return yield* engineError('invalid_usage', STALE_EDIT)
+    return yield* recommendInSession(request, version)
+  })
+
 /** Recommends for a new group, keeping every film on the current screen
  * that still passes. Only a Dono of the current group may edit it. */
 export const editSessionAttendees = (
@@ -451,12 +466,7 @@ export const editSessionAttendees = (
 ) =>
   Effect.gen(function* () {
     const front = yield* openSessionFront(id)
-    const owner = yield* Owner
-    if (owner === null || !idsOf(front.get('attendees')).includes(owner))
-      return yield* engineError(
-        'invalid_usage',
-        'só um Dono entre os Presentes pode editar a Sessão',
-      )
+    yield* attendingOwner(front, 'editar')
     if (people.length === 0)
       return yield* engineError(
         'invalid_usage',
@@ -466,18 +476,14 @@ export const editSessionAttendees = (
       resolveAttendees(db, people),
     )
     const request = yield* sessionRedoRequest(id)
-    const version = currentVersion(front)
-    return yield* recommendInSession(
-      {
-        ...request,
-        attendees,
-        ...(request.by !== undefined &&
-          !attendees.includes(request.by) && {
-            rule: 'default' as const,
-            by: undefined,
-          }),
-        keep: shownFilms(version).map((film) => film.id),
-      },
-      Number(yamlToJson(version.get('version') ?? null)),
-    )
+    return yield* editSession(front, {
+      ...request,
+      attendees,
+      ...(request.by !== undefined &&
+        !attendees.includes(request.by) && {
+          rule: 'default' as const,
+          by: undefined,
+        }),
+      keep: shownFilms(currentVersion(front)).map((film) => film.id),
+    })
   })

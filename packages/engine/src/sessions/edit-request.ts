@@ -6,9 +6,11 @@
 //
 // The edit replaces the request: a field it leaves out is a Restrição
 // removed, the inherited ones too (the similar goes with `noSimilar`, the
-// Série na ordem back to its default). The Presentes, the Regra and the
-// size stay the current version's. A told Session refuses (`closed_session`),
-// and so does a Dono who is not among the Presentes.
+// Série na ordem back to its default). The Presentes and the Regra stay
+// the current version's; the size (`count`) is the form's, or the current
+// one when it leaves it out. Each film that stays keeps its number. A told
+// Session refuses (`closed_session`), and so do a Dono who is not among the
+// Presentes and an edit of a version that is no longer the current one.
 
 import { Effect } from 'effect'
 import { isMapping, isSequence, yamlToJson } from '../data/yaml.ts'
@@ -17,10 +19,8 @@ import {
   SERIES_ORDER_MODES,
 } from '../recommendation/constraints/series-order.ts'
 import type { RecommendSessionRequest } from './open.ts'
-import { engineError } from '../runtime/EngineError.ts'
-import { Owner } from '../runtime/Owner.ts'
 import { currentVersion, shownFilms } from './file.ts'
-import { openSessionFront, recommendSession } from './redo.ts'
+import { editSession, openSessionFront } from './redo.ts'
 import { sessionRedoRequest } from './redo-request.ts'
 
 /** What the edit form asks: the request and the Restrições, everything
@@ -41,7 +41,11 @@ export type SessionRequestEdit = Pick<
   | 'noSad'
   | 'noMoods'
   | 'seriesOrder'
-> & { readonly moods: ReadonlyArray<string> }
+> & {
+  readonly moods: ReadonlyArray<string>
+  /** The version the edit was made on; the current one when left out. */
+  readonly version?: number
+}
 
 /** The fields of the current request the form shows again, as they were;
  * the similar and the Série na ordem come from the stored Restrições. */
@@ -101,30 +105,31 @@ const aboutKeep = (warning: string) => warning.startsWith('--manter ')
 
 /** Redoes open Session `id` with `edit` as its request, keeping the films
  * that still pass. */
-export const editSessionRequest = (id: string, edit: SessionRequestEdit) =>
+export const editSessionRequest = (
+  id: string,
+  { version, ...edit }: SessionRequestEdit,
+) =>
   Effect.gen(function* () {
     const front = yield* openSessionFront(id)
     const current = yield* sessionRedoRequest(id)
-    const owner = yield* Owner
-    if (owner !== null && !current.attendees?.includes(owner))
-      return yield* engineError(
-        'invalid_usage',
-        `só um Presente da Sessão ${id} edita o pedido dela`,
-      )
     const keep = shownFilms(currentVersion(front)).map((film) => film.id)
-    const redone = yield* recommendSession({
-      ...edit,
-      attendees: current.attendees,
-      session: id,
-      rule: current.rule,
-      by: current.by,
-      count: edit.count ?? current.count,
-      // Empty words clear the ones the Session kept.
-      request: edit.request ?? '',
-      noSimilar: !edit.similar?.length,
-      seriesOrder: edit.seriesOrder ?? DEFAULT_SERIES_ORDER,
-      keep: keep.length > 0 ? [keep.join(',')] : undefined,
-    })
+    const redone = yield* editSession(
+      front,
+      {
+        ...edit,
+        attendees: current.attendees,
+        session: id,
+        rule: current.rule,
+        by: current.by,
+        count: edit.count ?? current.count,
+        // Empty words clear the ones the Session kept.
+        request: edit.request ?? '',
+        noSimilar: !edit.similar?.length,
+        seriesOrder: edit.seriesOrder ?? DEFAULT_SERIES_ORDER,
+        keep: keep.length > 0 ? [keep.join(',')] : undefined,
+      },
+      version,
+    )
     return {
       ...redone,
       warnings: redone.warnings.filter((warning) => !aboutKeep(warning)),

@@ -11,11 +11,11 @@ import {
   readMoods,
   sessionRequestEditDraft,
   type Engine,
-  type ErrorOutput,
   type Outcome,
 } from '@filmes/engine'
 import type { SessionRequestEditForm } from '#/content/session-request'
 import { appEngine } from './engine'
+import { logEngineError } from './engine-log'
 
 /** What the edit page shows: the form's fields and the Climas to choose
  * from; or why there is no form. */
@@ -75,11 +75,6 @@ export function sessionEditsFromEngine(engine: Engine): SessionEdits {
         : done
     },
   }
-}
-
-function logEngineError(outcome: { output: ErrorOutput }): void {
-  const { code, message } = outcome.output.error
-  console.error(`engine: ${code}: ${message}`)
 }
 
 /** The edit page of Session `id` as `viewer` (the logged-in Dono's slug)

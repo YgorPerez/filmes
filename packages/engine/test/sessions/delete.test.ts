@@ -19,6 +19,9 @@ import {
 } from '../../src/index.ts'
 import { useFixture, type Fixture } from '../fixture.ts'
 
+/** "dono" is Bruno in the fixture: he deletes. */
+const AS_DONO = { owner: 'bruno' }
+
 function sessionFacts(fixture: Fixture, id: string) {
   return fixture.ok(
     consult(`SELECT fato_id, fonte FROM notas WHERE sessao = '${id}'
@@ -50,7 +53,11 @@ test('erases the Session and its Fatos and Satisfação, including after a rebui
   expect((await sessionFacts(fixture, id)).rows).toHaveLength(5)
   expect((await satisfaction()).disagreement).toBe(0.8889)
 
-  await fixture.ok(deleteSession({ session: id, mode: 'erase' }))
+  await fixture.ok(
+    deleteSession({ session: id, mode: 'erase' }),
+    undefined,
+    AS_DONO,
+  )
   expect((await sessionFacts(fixture, id)).rows).toEqual([])
   expect(existsSync(join(fixture.data, 'sessions', `${id}.md`))).toBe(false)
 
@@ -65,7 +72,11 @@ test('keeps the same Fatos and Fontes while dropping the Session from the list a
   const id = await toldSession(fixture)
   const before = await sessionFacts(fixture, id)
 
-  await fixture.ok(deleteSession({ session: id, mode: 'keep_taste' }))
+  await fixture.ok(
+    deleteSession({ session: id, mode: 'keep_taste' }),
+    undefined,
+    AS_DONO,
+  )
   expect(await sessionFacts(fixture, id)).toEqual(before)
   expect(
     readFileSync(join(fixture.data, 'sessions', `${id}.md`), 'utf8'),
@@ -89,11 +100,13 @@ test('requires no choice for pending pairwise answers and reserves the erased Li
   const answer = { ...link, films: [a.id, b.id] as const, choice: a.id }
   await fixture.ok(answerPairwise(answer))
   expect(await fixture.ok(pairwiseAnswers(session.id))).toHaveLength(1)
-  expect(await fixture.ok(sessionDeletion(session.id))).toEqual({
+  expect(
+    await fixture.ok(sessionDeletion(session.id), undefined, AS_DONO),
+  ).toEqual({
     hasFacts: false,
   })
 
-  await fixture.ok(deleteSession({ session: session.id }))
+  await fixture.ok(deleteSession({ session: session.id }), undefined, AS_DONO)
   const replacement = await fixture.ok(recommendSession(request))
   expect(replacement.session.id).not.toBe(session.id)
   const deleted = { error: { code: 'deleted_session' } }
@@ -125,10 +138,12 @@ test('requires a Dono among the Presentes', async () => {
     expect(rejected.output).toMatchObject({
       error: {
         code: 'invalid_usage',
-        message: 'Só um Dono que esteve nesta Sessão pode excluí-la.',
+        message: 'Só um Dono entre os Presentes pode excluir a Sessão.',
       },
     })
   }
+  const anonymous = await fixture.run(deleteSession({ session: session.id }))
+  expect(anonymous.output).toMatchObject({ error: { code: 'invalid_usage' } })
   const other = await fixture.ok(
     recommendSession({ attendees: ['bruno', 'vera'] }),
   )
@@ -164,13 +179,23 @@ test.each(['erase', 'keep_taste'] as const)(
       )
     const before = await facts()
     expect(before.rows).toHaveLength(2)
-    expect(await fixture.ok(sessionDeletion(session.id))).toEqual({
+    expect(
+      await fixture.ok(sessionDeletion(session.id), undefined, AS_DONO),
+    ).toEqual({
       hasFacts: true,
     })
-    const omitted = await fixture.run(deleteSession({ session: session.id }))
+    const omitted = await fixture.run(
+      deleteSession({ session: session.id }),
+      undefined,
+      AS_DONO,
+    )
     expect(omitted.output).toMatchObject({ error: { code: 'invalid_usage' } })
 
-    await fixture.ok(deleteSession({ session: session.id, mode }))
+    await fixture.ok(
+      deleteSession({ session: session.id, mode }),
+      undefined,
+      AS_DONO,
+    )
     await fixture.ok(rebuild)
     expect((await facts()).rows).toEqual(mode === 'erase' ? [] : before.rows)
   },

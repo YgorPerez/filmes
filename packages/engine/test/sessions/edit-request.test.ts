@@ -5,6 +5,7 @@
 
 import { describe, expect, test } from 'vite-plus/test'
 import {
+  castVotes,
   editSessionRequest,
   sessionRequestEditDraft,
   recommendSession,
@@ -24,6 +25,9 @@ const open = async (
 ): Promise<SessionRecommendation> =>
   plain(await fixture.ok(recommendSession(request)))
 
+/** "dono" is Bruno in the fixture: he edits. */
+const AS_DONO = { owner: 'bruno' }
+
 const ids = (out: SessionRecommendation) => out.films.map((f) => f.id)
 
 describe('editSessionRequest', () => {
@@ -37,6 +41,8 @@ describe('editSessionRequest', () => {
     const edited = plain(
       await fixture.ok(
         editSessionRequest(first.session.id, { moods: [], maxDuration: 110 }),
+        undefined,
+        AS_DONO,
       ),
     )
 
@@ -62,6 +68,8 @@ describe('editSessionRequest', () => {
           moods: [],
           request: 'algo bom',
         }),
+        undefined,
+        AS_DONO,
       ),
     )
 
@@ -69,19 +77,75 @@ describe('editSessionRequest', () => {
     expect(edited.films.every((film) => !film.new)).toBe(true)
   })
 
+  test('a kept film with yes Votos keeps its number', async () => {
+    const fixture = useFixture()
+    const first = await open(fixture, { attendees: ['dono', 'iara'] })
+    await fixture.ok(
+      castVotes({
+        session: first.session.id,
+        person: 'iara',
+        version: 1,
+        votes: [{ film: first.films[3]!.id, vote: 'yes' }],
+      }),
+    )
+
+    const edited = plain(
+      await fixture.ok(
+        editSessionRequest(first.session.id, { moods: [], request: 'algo' }),
+        undefined,
+        AS_DONO,
+      ),
+    )
+
+    expect(ids(edited)).toEqual(ids(first))
+  })
+
+  test('an edit of a version that is no longer the current one refuses', async () => {
+    const fixture = useFixture()
+    const first = await open(fixture, { attendees: ['dono'] })
+    await open(fixture, {
+      attendees: ['dono'],
+      session: first.session.id,
+      swap: [first.films[0]!.id],
+    })
+
+    const out = await fixture.run(
+      editSessionRequest(first.session.id, {
+        moods: [],
+        maxDuration: 110,
+        version: 1,
+      }),
+      undefined,
+      AS_DONO,
+    )
+
+    expect(out.output).toMatchObject({
+      error: {
+        code: 'invalid_usage',
+        message: 'a Sessão mudou; tente de novo',
+      },
+    })
+  })
+
   test('a new Clima replaces the list', async () => {
     const fixture = useFixture()
-    const first = await open(fixture, { attendees: ['iara'], count: 10 })
+    const first = await open(fixture, { attendees: ['vera'], count: 10 })
 
     const edited = plain(
       await fixture.ok(
         editSessionRequest(first.session.id, { moods: ['leve'] }),
+        undefined,
+        { owner: 'vera' },
       ),
     )
 
     expect(edited.kept).toEqual([])
     expect(edited.moods).toEqual(['leve'])
-    expect(edited.dropped?.length).toBe(5)
+    const left = ids(first).filter((id) => !ids(edited).includes(id))
+    expect(left.length).toBeGreaterThan(0)
+    expect(edited.dropped?.map((film) => film.id).toSorted()).toEqual(
+      left.toSorted(),
+    )
     expect(edited.warnings.filter((w) => w.startsWith('--manter'))).toEqual([])
   })
 
@@ -96,7 +160,11 @@ describe('editSessionRequest', () => {
     expect(first.constraints['similar']).toBeDefined()
 
     const edited = plain(
-      await fixture.ok(editSessionRequest(first.session.id, { moods: [] })),
+      await fixture.ok(
+        editSessionRequest(first.session.id, { moods: [] }),
+        undefined,
+        AS_DONO,
+      ),
     )
 
     expect(edited.constraints['similar']).toBeUndefined()
@@ -110,10 +178,28 @@ describe('editSessionRequest', () => {
 
     const out = await fixture.run(
       editSessionRequest(first.session.id, { moods: [], maxDuration: 110 }),
+      undefined,
+      AS_DONO,
     )
 
     expect(out.exitCode).not.toBe(0)
     expect(out.output).toMatchObject({ error: { code: 'closed_session' } })
+  })
+
+  test('an edit with no Dono logged in refuses', async () => {
+    const fixture = useFixture()
+    const first = await open(fixture, { attendees: ['dono'] })
+
+    const out = await fixture.run(
+      editSessionRequest(first.session.id, { moods: [], maxDuration: 110 }),
+    )
+
+    expect(out.output).toMatchObject({
+      error: {
+        code: 'invalid_usage',
+        message: 'Só um Dono entre os Presentes pode editar a Sessão.',
+      },
+    })
   })
 
   test('a Dono who is not among the Presentes cannot edit', async () => {

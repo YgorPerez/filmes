@@ -1,12 +1,12 @@
 import { Effect } from 'effect'
 import { authorOf, DataWriter } from '../data/DataWriter.ts'
-import { isSequence, pyStrValue } from '../data/yaml.ts'
 import { savePersonAndSync } from '../people/actions.ts'
-import { readPeople, resolvePerson } from '../people/people.ts'
+import { readPeople } from '../people/people.ts'
 import { items, removeItem } from '../people/Person.ts'
 import { engineError } from '../runtime/EngineError.ts'
 import { Run } from '../runtime/Run.ts'
 import { Sqlite, type Connection } from '../sqlite/Sqlite.ts'
+import { attendingOwner } from './attending-owner.ts'
 import { clearSession, syncSession } from './database.ts'
 import { billboardSource } from './facts.ts'
 import { eraseSessionFile, readSession, writeSession } from './file.ts'
@@ -18,28 +18,11 @@ export type DeleteSessionRequest = {
   readonly mode?: 'keep_taste' | 'erase'
 }
 
-const deletionRefused = () =>
-  engineError(
-    'invalid_usage',
-    'Só um Dono que esteve nesta Sessão pode excluí-la.',
-  )
-
-const deletionOwner = Effect.gen(function* () {
-  const owner = yield* resolvePerson('dono')
-  if (!owner.owner) return yield* deletionRefused()
-  return owner
-})
-
-const deletableSession = (id: string, owner: string) =>
+/** The Session to delete and the Dono deleting it, who was there. */
+const deletableSession = (id: string) =>
   Effect.gen(function* () {
     const file = yield* readSession(id)
-    const attendees = file.frontmatter.get('attendees')
-    if (
-      !isSequence(attendees) ||
-      !attendees.some((person) => pyStrValue(person) === owner)
-    )
-      return yield* deletionRefused()
-    return file
+    return { file, owner: yield* attendingOwner(file.frontmatter, 'excluir') }
   })
 
 const hasFacts = (db: Connection, id: string) =>
@@ -59,8 +42,7 @@ const hasFacts = (db: Connection, id: string) =>
 /** What the Dono needs to confirm before deleting the Session. */
 export const sessionDeletion = (id: string) =>
   Effect.gen(function* () {
-    const owner = yield* deletionOwner
-    yield* deletableSession(id, owner.slug)
+    yield* deletableSession(id)
     return {
       hasFacts: yield* (yield* Sqlite).read((db) => hasFacts(db, id)),
     }
@@ -96,19 +78,17 @@ const eraseBillboardFacts = (db: Connection, id: string) =>
  * derived rows go through the same write as the Dono's commit. */
 export const deleteSession = ({ session: id, mode }: DeleteSessionRequest) =>
   Effect.gen(function* () {
-    const owner = yield* deletionOwner
+    const { owner } = yield* deletableSession(id)
     const { today } = yield* Run
     const writer = yield* DataWriter
     return yield* writer.write(
       { author: authorOf(owner), message: `delete session ${id}` },
       (db) =>
         Effect.gen(function* () {
-          const stillOwner = yield* db.get(
-            'SELECT 1 FROM pessoas WHERE slug = ? AND dono = 1',
-            owner.slug,
-          )
-          if (!stillOwner) return yield* deletionRefused()
-          const { frontmatter, body } = yield* deletableSession(id, owner.slug)
+          // Read again under the write: the Session or the Dono may have
+          // changed since.
+          const { file } = yield* deletableSession(id)
+          const { frontmatter, body } = file
           const anyFacts = yield* hasFacts(db, id)
           if (anyFacts && mode !== 'keep_taste' && mode !== 'erase')
             return yield* engineError(

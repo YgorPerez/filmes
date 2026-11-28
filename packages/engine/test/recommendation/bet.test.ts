@@ -430,7 +430,9 @@ feedback:
     await fixture.ok(rebuild)
     expect(bets(await draw())).toEqual([])
 
-    await fixture.ok(deleteSession({ session: id, mode }))
+    await fixture.ok(deleteSession({ session: id, mode }), undefined, {
+      owner: 'bruno',
+    })
     await fixture.ok(rebuild)
     expect(bets(await draw())).toEqual(fresh)
   },

@@ -33,7 +33,8 @@ export default defineTool({
     'ainda passam ficam no número, os que uma Restrição ou um Veto novos tiram saem em `dropped` e as vagas ganham filme ' +
     'novo; Climas novos ou um parecido novo trocam a lista inteira. A edição substitui o pedido: mande-o inteiro, com o que ' +
     'continua valendo, porque o campo que falta é Restrição tirada (o parecido e a Série na ordem também; `moods: []` tira os ' +
-    'Climas). Os Presentes, a Regra e o tamanho ficam os da versão atual; para mudar os Presentes, use `edit_attendees`. ' +
+    'Climas). `count` muda o tamanho da lista; sem ele, fica o da versão atual. Os Presentes e a Regra ficam os da versão ' +
+    'atual; para mudar os Presentes, use `edit_attendees`. ' +
     'Sessão já contada responde `closed_session`, e só um Dono entre os Presentes edita. Devolve o mesmo que `recommend`, ' +
     'com `session.version` nova: depois, chame `billboard`.',
   input: fields.extend({

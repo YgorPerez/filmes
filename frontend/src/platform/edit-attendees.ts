@@ -2,6 +2,7 @@ import { editSessionAttendees } from '@filmes/engine'
 import { all, field } from '#/content/form-fields'
 import { feedbackPath, sessionPath } from '#/content/session-paths'
 import { appEngine } from './engine'
+import { logEngineError } from './engine-log'
 import { appPoster, formPoster, seeOther } from './form-post'
 import { appNotes } from './notes'
 
@@ -31,9 +32,8 @@ export async function serveAttendeeEdit(request: Request, session: string) {
     },
   )
   if (edited.exitCode !== 0) {
-    const { code, message } = edited.output.error
-    if (GONE.has(code)) return seeOther(path)
-    console.error(`engine: ${code}: ${message}`)
+    if (GONE.has(edited.output.error.code)) return seeOther(path)
+    logEngineError(edited)
     return seeOther(`${editor}&erroPresentes=falha`)
   }
   const token = appNotes().remember({

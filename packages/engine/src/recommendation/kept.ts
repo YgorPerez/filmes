@@ -131,18 +131,24 @@ const liftKept = (
   return new Map(onScreen.map(([, position], i) => [lifted[i]!, position]))
 }
 
+/** How a refazer regenerates: `keep`, the films asked to stay; `swapped`,
+ * what the Dono swapped from the screen; `replacing`, the new Restrição
+ * that replaces the whole list; `newMood`, whether the Climas changed;
+ * `preservePositions`, whether each Mantido stays at its own number (an
+ * edit of the Session) instead of the Votos ordering them. */
+export interface RegenerateOptions {
+  readonly keep: ReadonlyArray<string>
+  readonly swapped: ReadonlySet<string>
+  readonly replacing: Constraint | undefined
+  readonly newMood: boolean
+  readonly preservePositions: boolean
+}
+
 /** What stays and what was on the screen of the Session's current version,
- * and the warnings of the kept films that were not on it (`preparar`).
- * `swapped` is what the Dono swapped from it; `replacing`, the new
- * Restrição that replaces the whole list; `newMood`, whether the Climas
- * changed. */
+ * and the warnings of the kept films that were not on it (`preparar`). */
 export const prepareRegenerate = (
   front: YamlMapping,
-  keep: ReadonlyArray<string>,
-  swapped: ReadonlySet<string>,
-  replacing: Constraint | undefined,
-  newMood: boolean,
-  preservePositions: boolean,
+  { keep, swapped, replacing, newMood, preservePositions }: RegenerateOptions,
 ): { readonly regenerate: Regenerate; readonly warnings: string[] } => {
   const version = currentVersion(front)
   const screen = shownFilms(version)

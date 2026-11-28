@@ -19,7 +19,6 @@ import {
   sessionVersions,
   shownFilms,
   type Engine,
-  type ErrorOutput,
 } from '@filmes/engine'
 import {
   sessionLinkPath,
@@ -30,6 +29,7 @@ import {
   type VoteNotice,
   type VoteRefusal,
 } from '#/content/session-votes-address'
+import { logEngineError } from './engine-log'
 import { failureOf, seeOther } from './form-post'
 import { resolveSessionLink, type SessionLinkView } from './session-link'
 import { fromThisSite } from './same-site'
@@ -93,10 +93,6 @@ function oneAtATime<A>(session: string, task: () => Promise<A>): Promise<A> {
     if (queues.get(session) === settled) queues.delete(session)
   })
   return run
-}
-
-function logEngineError({ output }: { output: ErrorOutput }): void {
-  console.error(`engine: ${output.error.code}: ${output.error.message}`)
 }
 
 const filmsOf = (form: FormData, name: string) =>
