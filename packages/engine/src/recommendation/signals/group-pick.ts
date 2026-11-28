@@ -70,7 +70,6 @@ export const groupPick: Signal = {
           film: filmText(text(row, 'titulo'), numOrNull(row, 'ano')),
         })
       }
-      if (seeds.size === 0) return []
       const neighbors = yield* round.db.all(
         NEIGHBORS,
         JSON.stringify([...seeds.keys()]),

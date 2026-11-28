@@ -5,19 +5,28 @@
 // Session's page, the Dono records them as taste or discards them (posting
 // to `/sessoes/<id>/perguntas`): gosto permanente only after her yes.
 //
+// Before the pairs, a Presente with few Notas picks the groups of films
+// most like her (#415), posting to `/participar/perguntas/grupos`; the pick
+// waits with her answers and the Dono decides on both at once.
+//
 // Every answer revalidates the link (`resolveSessionLink`) with what the
 // request carries, and takes the Session and the Presente from it, never
 // from the form. The engine checks the pair is one it asks next. The app's
 // engine is wired in `billboard.ts`. Server only.
 
 import {
+  answerGroupPick,
   answerPairwise,
   decidePairwise,
+  groupPickQuestion,
+  MAX_GROUP_PICKS,
   pairwiseAnswers,
   pairwiseQuestions,
   type Engine,
   type ErrorOutput,
   type FilmRef,
+  type GroupChoice,
+  type Outcome,
   type WaitingAnswers,
 } from '@filmes/engine'
 import { pairwisePath } from '#/content/pairwise-address'
@@ -33,12 +42,19 @@ import { fromThisSite } from './same-site'
  * title stays the Catálogo's, the one the Dono reads the answers by. */
 export type PairFilm = FilmRef & { poster: string | null }
 
+/** A group of films to pick (#415), each film with its cover. */
+export type PickGroup = Omit<GroupChoice, 'films'> & {
+  films: ReadonlyArray<PairFilm>
+}
+
 /** What `/participar/perguntas` shows: how many she answered, of how many,
- * and the next pair (null once all are answered). */
+ * and the next pair (null once all are answered). `groups`, when she has
+ * groups to pick first, with how many she may pick. */
 export type PairwisePage = {
   answered: number
   total: number
   pair: readonly [PairFilm, PairFilm] | null
+  groups?: { max: number; choices: ReadonlyArray<PickGroup> }
 }
 
 function logEngineError({ output }: { output: ErrorOutput }): void {
@@ -53,26 +69,42 @@ export async function pairwisePage(
 ): Promise<PairwisePage | null> {
   const link = await resolveSessionLink(search, engine, database)
   if (!link?.selected) return null
-  const asked = await engine.run(
-    pairwiseQuestions({ session: link.session, person: link.selected.person }),
-  )
-  if (asked.exitCode !== 0) {
-    logEngineError(asked)
+  const request = { session: link.session, person: link.selected.person }
+  const [asked, picks] = await Promise.all([
+    engine.run(pairwiseQuestions(request)),
+    engine.run(groupPickQuestion(request)),
+  ])
+  if (asked.exitCode !== 0 || picks.exitCode !== 0) {
+    if (asked.exitCode !== 0) logEngineError(asked)
+    if (picks.exitCode !== 0) logEngineError(picks)
     return null
   }
   const { answered, pairs } = asked.output
   const total = answered + pairs.length
   const next = pairs[0]
-  if (!next) return { answered, total, pair: null }
-  const byId = await cardsById(
-    engine,
-    next.map((film) => film.id),
-  )
+  const groups = picks.output ?? []
+  const byId = await cardsById(engine, [
+    ...(next ?? []).map((film) => film.id),
+    ...groups.flatMap((group) => group.films.map((film) => film.id)),
+  ])
   const withCover = (film: FilmRef): PairFilm => {
     const card = byId.get(film.id)
     return { ...film, poster: card?.poster ?? null }
   }
-  return { answered, total, pair: [withCover(next[0]), withCover(next[1])] }
+  return {
+    answered,
+    total,
+    pair: next ? [withCover(next[0]), withCover(next[1])] : null,
+    ...(groups.length > 0 && {
+      groups: {
+        max: MAX_GROUP_PICKS,
+        choices: groups.map((group) => ({
+          ...group,
+          films: group.films.map(withCover),
+        })),
+      },
+    }),
+  }
 }
 
 const field = (form: FormData, name: string) => {
@@ -80,16 +112,19 @@ const field = (form: FormData, name: string) => {
   return typeof value === 'string' ? value : undefined
 }
 
-/** `POST /participar/perguntas/enviar`: keeps one answer and goes back to
- * the page, which shows the next pair; `erro=1` when it was not kept. A
- * link that no longer opens goes to `/participar`, which says so. Only a
- * form of this site. */
-export async function pairwiseAnswerAction(
+/** A Presente's answer posted through the link: the form, the Session,
+ * the Presente and the page to go back to; or the Response when it cannot
+ * be taken (403 from elsewhere, `/participar` when the link no longer
+ * opens). The Session and the Presente come from the link, never from the
+ * form. */
+async function linkAnswer(
   request: Request,
   engine: Engine,
   database: string,
   origin: string | undefined,
-): Promise<Response> {
+): Promise<
+  Response | { form: FormData; session: string; person: string; back: string }
+> {
   if (!fromThisSite(request, origin))
     return new Response('Origem recusada', { status: 403 })
   const form = await request.formData()
@@ -102,15 +137,64 @@ export async function pairwiseAnswerAction(
   if (!link?.selected || !search.chave) return seeOther('/participar')
   const person = link.selected.person
   const back = pairwisePath(link.session, search.chave, person)
-  const [a, b] = [field(form, 'a'), field(form, 'b')]
-  const choice = field(form, 'escolha') || null
-  if (!a || !b) return seeOther(`${back}&erro=1`)
-  const done = await engine.run(
-    answerPairwise({ session: link.session, person, films: [a, b], choice }),
-  )
+  return { form, session: link.session, person, back }
+}
+
+/** Back to the page once the engine kept the answer; with `erro=1` when
+ * it did not (logged unless the answer was refused). */
+function answered(done: Outcome<unknown>, back: string): Response {
   if (done.exitCode === 0) return seeOther(back)
   if (done.output.error.code !== 'invalid_usage') logEngineError(done)
   return seeOther(`${back}&erro=1`)
+}
+
+/** `POST /participar/perguntas/enviar`: keeps one answer and goes back to
+ * the page, which shows the next pair; `erro=1` when it was not kept. A
+ * link that no longer opens goes to `/participar`, which says so. Only a
+ * form of this site. */
+export async function pairwiseAnswerAction(
+  request: Request,
+  engine: Engine,
+  database: string,
+  origin: string | undefined,
+): Promise<Response> {
+  const post = await linkAnswer(request, engine, database, origin)
+  if (post instanceof Response) return post
+  const { form, session, person, back } = post
+  const [a, b] = [field(form, 'a'), field(form, 'b')]
+  const choice = field(form, 'escolha') || null
+  if (!a || !b) return seeOther(`${back}&erro=1`)
+  return answered(
+    await engine.run(
+      answerPairwise({ session, person, films: [a, b], choice }),
+    ),
+    back,
+  )
+}
+
+/** `POST /participar/perguntas/grupos`: keeps the groups she picked
+ * (`grupo`, 1 to `MAX_GROUP_PICKS`), or none with `acao=nenhum`, and goes
+ * back to the page, which shows the pairs; `erro=1` when it was not kept.
+ * A link that no longer opens goes to `/participar`. Only a form of this
+ * site. */
+export async function groupPickAction(
+  request: Request,
+  engine: Engine,
+  database: string,
+  origin: string | undefined,
+): Promise<Response> {
+  const post = await linkAnswer(request, engine, database, origin)
+  if (post instanceof Response) return post
+  const { form, session, person, back } = post
+  const none = field(form, 'acao') === 'nenhum'
+  const groups = none
+    ? []
+    : form.getAll('grupo').filter((g): g is string => typeof g === 'string')
+  if (!none && groups.length === 0) return seeOther(`${back}&erro=1`)
+  return answered(
+    await engine.run(answerGroupPick({ session, person, groups })),
+    back,
+  )
 }
 
 /** The answers that wait for the Dono, by Presente; none when the engine

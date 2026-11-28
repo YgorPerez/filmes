@@ -801,6 +801,371 @@ exports[`avaliar on MovieLens files, as recorded > a small sample warns that Mov
 }
 `;
 
+exports[`avaliar on MovieLens files, as recorded > a small sample warns that MovieLens had few users 2`] = `
+{
+  "exitCode": 0,
+  "output": {
+    "date": "2026-11-20",
+    "movielensSample": {
+      "seed": 27,
+      "users": 4,
+    },
+    "offline": {
+      "movielens": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 0.5,
+              "hits": 1,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {},
+        },
+        "coverageTop5": 1,
+        "filmsTop5": 10,
+        "heldOut4Plus": 1,
+        "people": 2,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
+        },
+        "recall50": 1,
+        "retrieved": 1,
+        "similarityTop5": 0.35,
+        "withEvidence": 10,
+      },
+      "people": {
+        "calibration": {
+          "overall": {
+            "moderate": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+            "none": {
+              "heldOut": 5,
+              "hitRate": 0.6,
+              "hits": 3,
+            },
+            "rises": null,
+            "strong": {
+              "heldOut": 2,
+              "hitRate": 1,
+              "hits": 2,
+            },
+            "weak": {
+              "heldOut": 0,
+              "hitRate": null,
+              "hits": 0,
+            },
+          },
+          "people": {
+            "bruno": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 0,
+                "hits": 0,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 2,
+                "hitRate": 1,
+                "hits": 2,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "iara": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "quim": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 1,
+                "hitRate": 1,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+            "rosa": {
+              "moderate": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "none": {
+                "heldOut": 2,
+                "hitRate": 0.5,
+                "hits": 1,
+              },
+              "rises": null,
+              "strong": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+              "weak": {
+                "heldOut": 0,
+                "hitRate": null,
+                "hits": 0,
+              },
+            },
+          },
+        },
+        "coverageTop5": 0.6,
+        "filmsTop5": 20,
+        "heldOut4Plus": 5,
+        "people": 4,
+        "predictedRatingError": {
+          "films": 0,
+          "meanAbsoluteError": null,
+          "rawMeanAbsoluteError": null,
+        },
+        "recall50": 0.8,
+        "retrieved": 4,
+        "similarityTop5": 0.3604166666666666,
+        "withEvidence": 12,
+      },
+    },
+    "online": {
+      "chosenTop5": 0,
+      "meanReaction": null,
+      "rateTop5": null,
+      "reactions": 0,
+      "satisfaction": {
+        "disagreement": null,
+        "groupSessions": 0,
+        "minimum": null,
+        "people": {},
+      },
+      "sessions": 0,
+      "withFilm": 0,
+    },
+    "priority": "offline",
+    "versions": {
+      "adultos.csv": "cd83a7697b1ed11b0bffed5a6d0571eb4e6fd5f7be9d6309f6007cc4a83f5fe4",
+      "arestas.csv": "80556e11b62d8a1df30d1f92265b972cae6393bcca16b47b5383036a2118cb59",
+      "atores_imdb.csv": "9cd70976800f6e8fb605c5630a0465614807c43afe88cb1569298b063d9f0e32",
+      "classificacoes.csv": "c3a70b77d1c21b31571296783da337367fb2a67cad3c945ab6310f7671b451aa",
+      "elenco_principal_imdb.csv": "559f381e49c30635a34a1469db33ef7c5de47619fd211b204e027736ead40262",
+      "entidades.csv": "3c5ba7f92a9706e1cee2dc219904cc3a9dca99b01aa1442b496b5981e426f98a",
+      "entropia_movielens.csv": "54e8912b088438c2f77c5ba7671c3cf29c2e528ccafbdec5f8e9423b6f2e498e",
+      "estreias.csv": "880d7cedc13ca6b4219cb65ec8bd5fa81f08aee038295689d0ec2b269baf48a3",
+      "filmes.csv": "a21fd97794ea796cc0928c85bc017807d8d5a07a5a20166cb6ac2a64176e61be",
+      "fonte_gosto_movielens.csv": "bd0e4d5aac3969eb131926c4a3fe9dc12b220d13543832caee9c72717cac4a9a",
+      "generos_imdb.csv": "ca9cb82915808484dcd3881bd375601d7daeb8d4e28c79cebf10e672ca5389e3",
+      "genoma.csv": "bf9e335eaec86c9fbe2d5ca1d55cf4a75f1a865c83f48750d359f07ac4169ed1",
+      "idiomas_originais.csv": "3fd72e324b22bdd4a924778d6826f20e648099c908c0a40de7af2cf7ee6dacbf",
+      "ml-32m/links.csv": "d8e1d4a9be5d5f36887488aa18d4088e9ce5ff13a56cc1dc8c2d7239ee295d6e",
+      "ml-32m/ratings.csv": "17815b6b621ab2a8bec43788881b371e87522a0dd0e38052369aa6d360b67e38",
+      "notas.csv": "ca2a3b8a88cc51a06428b4ecc48695f268ad9473128fa4b1de8cb09236210df4",
+      "notas_gosto_movielens.csv": "cf29b7d42d9b621c199733204f4e7f96e723e4f4f01b59a2e4225fe4133a9047",
+      "notas_movielens.csv": "732f70f4971aca938e7cc266ded071f301ddf13cda14e7f3e008eebcbb3e17b2",
+      "series_de_filmes.csv": "c190c9b62c3f5391fbb12cb679915c497f8a443cdb5fd0d90fcce09ec62f2276",
+      "slugs_letterboxd.csv": "aef16df5bcb6b746236d595d8c29a29728a3f8bb45726201631f04ed2f5071aa",
+      "subclasses_wikidata.csv": "97f1dbb801f80d234d4923d3c86badf59f95e4258d56b5f6d6b7a7ae0956af3a",
+      "tags_movielens.csv": "0dfeb78915edc7a7e107945d2ebd7882c17aab3b5265ba3646e0b9e9cb25c0cd",
+      "vizinhos.csv": "40b71928cc268a6957391390d3be7194c5c17e812fe85973ba02f96803911d5d",
+    },
+    "warnings": [
+      "O MovieLens tinha só 4 usuários para sortear.",
+    ],
+    "weights": {
+      "adjustment": {
+        "level": {
+          "high": 1.5,
+          "low": 0.5,
+          "none": 0,
+          "normal": 1,
+        },
+      },
+      "awards": {
+        "weight": 0.1,
+      },
+      "bet": {
+        "maxFacts": 1,
+        "maxPredictedIncrease": 2,
+        "minPredicted": 7,
+        "minPredictedFloor": 6,
+        "minSuccessRate": 0.25,
+        "position": 5,
+        "priorFailures": 2,
+        "priorSuccesses": 2,
+      },
+      "catalog": {
+        "minImdbRating": 7,
+        "minVotes": 1000,
+      },
+      "constraints": {
+        "onDemandReach": 50,
+      },
+      "critics": {
+        "weight": 0.1,
+      },
+      "diversity": {
+        "depth": 10,
+        "lambda": 1,
+        "pool": 30,
+      },
+      "group": {
+        "weight": 0.05,
+      },
+      "imdbRating": {
+        "weight": 0.3,
+      },
+      "mood": {
+        "weight": 0.1,
+      },
+      "neighbors": {
+        "weight": 1,
+      },
+      "noSad": {
+        "minRelevance": 0.6,
+        "minUsersHeavyTheme": 2,
+        "minUsersSad": 3,
+      },
+      "pairwise": {
+        "pairs": 10,
+      },
+      "path": {
+        "weight": {
+          "cast": 0.5,
+          "cinematography": 0.5,
+          "director": 1,
+          "genre": 0.3,
+          "producer": 0.5,
+          "series": 1,
+          "writer": 0.8,
+        },
+      },
+      "people": {
+        "statementWeight": 1,
+      },
+      "predictionCalibration": {
+        "pseudoCount": 20,
+      },
+      "ratingDecay": {
+        "floor": 0.25,
+        "halfLifeYears": 5,
+      },
+      "ratingPercentile": {
+        "minRatings": 20,
+        "moderate": 0.7,
+        "moderateAgainst": 0.1,
+        "strong": 0.9,
+        "weak": 0.4,
+        "weakAgainst": 0.2,
+      },
+      "recommendation": {
+        "size": 5,
+      },
+      "satisfaction": {
+        "factor": 0.25,
+        "window": 5,
+      },
+      "seen": {
+        "weight": 1,
+      },
+      "similar": {
+        "candidates": 50,
+        "genomeTags": 15,
+        "genomeTagsConsidered": 40,
+        "movielensTags": 20,
+        "weight": {
+          "genome": 0.35,
+          "genre": 0.1,
+          "movielensTags": 0.25,
+          "neighbors": 0.2,
+          "people": 0.1,
+        },
+      },
+      "strength": {
+        "multiplier": {
+          "guess": 0,
+          "moderate": 0.6,
+          "strong": 1,
+          "weak": 0.3,
+        },
+      },
+      "tagVetoes": {
+        "minRelevance": 0.7,
+        "minUsers": 10,
+      },
+      "tasteNeighbors": {
+        "k": 50,
+        "minShared": 10,
+        "neutralBand": 0.05,
+        "weight": 1,
+      },
+      "utility": {
+        "k": 1,
+        "maxEvidence": 5,
+      },
+    },
+  },
+}
+`;
+
 exports[`avaliar on MovieLens files, as recorded > a tag user that is not an int is refused 1`] = `
 {
   "exitCode": 1,

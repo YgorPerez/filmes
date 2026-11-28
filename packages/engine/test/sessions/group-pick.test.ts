@@ -162,8 +162,9 @@ describe('answerGroupPick', () => {
     withGroups(fixture)
     const session = await open(fixture)
 
-    expect((await pick(fixture, session, 'teo', ['noise', 'tides'])).output)
-      .toEqual({ groups: ['noise', 'tides'] })
+    expect(
+      (await pick(fixture, session, 'teo', ['noise', 'tides'])).output,
+    ).toEqual({ groups: ['noise', 'tides'] })
     expect(
       await fixture.ok(groupPickQuestion({ session, person: 'teo' })),
     ).toBeNull()
@@ -180,14 +181,14 @@ describe('answerGroupPick', () => {
       'utf8',
     )
     expect(file).toContain('group_picks:')
-    expect(
-      await rows(fixture, 'SELECT * FROM escolhas_de_grupo'),
-    ).toEqual([])
+    expect(await rows(fixture, 'SELECT * FROM escolhas_de_grupo')).toEqual([])
   })
 
   test('refuses a group not asked, the same group twice and more than 3', async () => {
     const fixture = useFixture()
-    withGroups(fixture, `${GROUPS}
+    withGroups(
+      fixture,
+      `${GROUPS}
 [a]
 name = "A"
 films = ["tt9000201", "tt9000202", "tt9000203"]
@@ -197,7 +198,8 @@ labels = ["um", "dois", "três"]
 name = "B"
 films = ["tt9000601", "tt9000602", "tt9000603"]
 labels = ["um", "dois", "três"]
-`)
+`,
+    )
     const session = await open(fixture)
 
     for (const groups of [
@@ -243,12 +245,10 @@ describe('decidePairwise', () => {
     )
 
     const waiting = await fixture.ok(pairwiseAnswers(session))
-    expect(waiting.map((w) => [w.person, w.groups.map((g) => g.id)])).toEqual(
-      [
-        ['quim', ['noise']],
-        ['teo', []],
-      ],
-    )
+    expect(waiting.map((w) => [w.person, w.groups.map((g) => g.id)])).toEqual([
+      ['quim', ['noise']],
+      ['teo', []],
+    ])
     expect(waiting[0]?.answers).toEqual([])
     expect(waiting[0]?.groups[0]?.films.map((f) => f.title)).toEqual([
       'Rio Abaixo',
@@ -275,6 +275,11 @@ describe('decidePairwise', () => {
     // Asked no more, in this Session or the next.
     expect(
       await fixture.ok(groupPickQuestion({ session, person: 'teo' })),
+    ).toBeNull()
+    expect(
+      await fixture.ok(
+        groupPickQuestion({ session: await open(fixture), person: 'teo' }),
+      ),
     ).toBeNull()
     expect(
       await rows(
@@ -355,18 +360,62 @@ describe('decidePairwise', () => {
     expect(file).toContain('discarded_on')
   })
 
+  test('a film in two groups she picked seeds once', async () => {
+    const fixture = useFixture()
+    withGroups(
+      fixture,
+      `${GROUPS}
+[shore]
+name = "Beira"
+films = ["tt9000101", "tt9000303", "tt9000401"]
+labels = ["praia", "vento", "sal"]
+`,
+    )
+    const session = await open(fixture)
+    await pick(fixture, session, 'teo', ['tides', 'shore'])
+    expect(await record(fixture, session, 'teo')).toEqual({
+      person: 'teo',
+      added: 2,
+    })
+
+    const { films } = await fixture.ok(
+      recommend({ attendees: ['teo'], count: 50 }),
+    )
+    const house = films.find((f) => f.id === 'tt9001001')
+    expect(
+      house?.evidence['teo']?.filter((e) =>
+        e.text.includes('a O Farol de Areia (2012),'),
+      ),
+    ).toHaveLength(1)
+  })
+
+  test('a group no longer in the config neither waits nor is recorded', async () => {
+    const fixture = useFixture()
+    withGroups(fixture)
+    const session = await open(fixture)
+    await pick(fixture, session, 'teo', ['noise'])
+    withGroups(fixture, GROUPS.replace('[noise]', '[renamed]'))
+
+    expect(await fixture.ok(pairwiseAnswers(session))).toEqual([])
+    expect(await record(fixture, session, 'teo')).toEqual({
+      person: 'teo',
+      added: 0,
+    })
+  })
+
   test('deleting the Session, keeping the taste, discards the groups that wait', async () => {
     const fixture = useFixture()
     withGroups(fixture)
     const { session } = await fixture.ok(
-      recommendSession({ attendees: ['bruno', 'quim'] }),
+      recommendSession({ attendees: ['bruno', 'quim', 'teo'] }),
     )
     await pick(fixture, session.id, 'quim', ['noise'])
+    await pick(fixture, session.id, 'teo', [])
     await fixture.ok(
       recordFeedback({
         session: session.id,
         film: 'Pequenos Milagres',
-        ratings: ['bruno=1', 'quim=5'],
+        ratings: ['bruno=1', 'quim=5', 'teo=5'],
       }),
     )
     await fixture.ok(

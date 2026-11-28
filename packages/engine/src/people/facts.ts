@@ -149,7 +149,7 @@ export const seenId = (slug: string, seen: Seen): string =>
     ratingValue(seen.rating),
   )
 
-export const groupPickId = (slug: string, pick: GroupPick): string =>
+const groupPickId = (slug: string, pick: GroupPick): string =>
   factId(
     'escolhas_de_grupo',
     slug,
@@ -414,11 +414,10 @@ const deleteRows = (db: Connection, slug: string | null) => {
         'relatos',
         'escolhas_de_grupo',
         'apelidos',
-      ].map(
-        (table) =>
-          slug === null
-            ? `DELETE FROM ${table}`
-            : `DELETE FROM ${table} WHERE pessoa = ?`,
+      ].map((table) =>
+        slug === null
+          ? `DELETE FROM ${table}`
+          : `DELETE FROM ${table} WHERE pessoa = ?`,
       ),
     ],
     (sql) => db.run(sql, ...params),

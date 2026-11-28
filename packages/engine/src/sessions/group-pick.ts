@@ -26,7 +26,6 @@ import type { FilmRef } from '../catalog/search.ts'
 import { DataWriter } from '../data/DataWriter.ts'
 import type { GitError } from '../data/git.ts'
 import {
-  isMapping,
   isSequence,
   pyTruthy,
   yamlToJson,
@@ -73,11 +72,12 @@ export interface GroupPickAnswer extends GroupPickRequest {
   readonly groups: ReadonlyArray<string>
 }
 
+/** An answer as `answerGroupPick` wrote it. */
 type Stored = {
-  person?: unknown
-  groups?: unknown
-  recorded_on?: unknown
-  discarded_on?: unknown
+  person: string
+  groups: string[]
+  recorded_on?: string
+  discarded_on?: string
 }
 
 const KEY = 'group_picks'
@@ -87,17 +87,13 @@ const stored = (front: YamlMapping): YamlValue[] => {
   return pyTruthy(list) && isSequence(list) ? [...list] : []
 }
 
-const plain = (item: YamlValue): Stored =>
-  isMapping(item) ? (yamlToJson(item) as Stored) : {}
-
-const groupsOf = (answer: Stored): string[] =>
-  Array.isArray(answer.groups) ? answer.groups.map(String) : []
+const plain = (item: YamlValue): Stored => yamlToJson(item) as Stored
 
 /** An answer with groups that no decision has taken yet. */
 const waits = (answer: Stored) =>
   answer.recorded_on === undefined &&
   answer.discarded_on === undefined &&
-  groupsOf(answer).length > 0
+  answer.groups.length > 0
 
 /** The waiting answers of `person`, each with its place in the list. */
 export const waitingGroupPicksOf = (
@@ -107,7 +103,7 @@ export const waitingGroupPicksOf = (
   stored(front).flatMap((item, index) => {
     const answer = plain(item)
     return answer.person === person && waits(answer)
-      ? [[index, groupsOf(answer)] as const]
+      ? [[index, answer.groups] as const]
       : []
   })
 
@@ -143,7 +139,7 @@ export const peopleWithGroupPicks = (front: YamlMapping): string[] => [
     stored(front)
       .map(plain)
       .filter(waits)
-      .map((a) => String(a.person)),
+      .map((a) => a.person),
   ),
 ]
 
@@ -175,7 +171,14 @@ const inCatalog = (
         return film === undefined ? [] : [film]
       })
       return refs.length === group.films.length
-        ? [{ id: group.id, name: group.name, labels: group.labels, films: refs }]
+        ? [
+            {
+              id: group.id,
+              name: group.name,
+              labels: group.labels,
+              films: refs,
+            },
+          ]
         : []
     })
   })
@@ -214,8 +217,7 @@ const questionIn = (
 > =>
   Effect.gen(function* () {
     const { weights } = yield* Environment
-    if (stored(front).some((item) => plain(item).person === person))
-      return null
+    if (stored(front).some((item) => plain(item).person === person)) return null
     if (!(yield* hasFewRatings(db, person, weights))) return null
     if (yield* hasOwnPick(db, person)) return null
     const groups = yield* inCatalog(db, yield* readFilmGroups)

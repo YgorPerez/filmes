@@ -191,8 +191,9 @@ const sameValue = (x: unknown, y: unknown): boolean =>
 
 /** Python's `==` on the frozen dataclasses: every field equal. */
 const equal = <A extends object>(a: A, b: A): boolean =>
-  (Object.keys(a) as Array<keyof A>).every((key) => sameValue(a[key], b[key])) &&
-  Object.keys(a).length === Object.keys(b).length
+  (Object.keys(a) as Array<keyof A>).every((key) =>
+    sameValue(a[key], b[key]),
+  ) && Object.keys(a).length === Object.keys(b).length
 
 // --- body lines ----------------------------------------------------------
 
@@ -263,7 +264,7 @@ export const seenLine = (s: Seen): string => {
 }
 
 /** The body line of an Escolha de grupo. */
-export const groupPickLine = (p: GroupPick): string =>
+const groupPickLine = (p: GroupPick): string =>
   `- ${[p.date, p.source, `${p.label} (${p.group})`, p.films.join(', ')].join(' · ')}`
 
 type Groups = Readonly<Record<string, string | undefined>>
@@ -293,12 +294,13 @@ const seen = (g: Groups): Seen => ({
   ...(g.edited === undefined ? {} : { edited: g.edited }),
 })
 
+/** Every group of `GROUP_PICK_LINE` is in a line it matched. */
 const groupPick = (g: Groups): GroupPick => ({
-  date: g.date ?? '',
-  source: g.source ?? '',
-  group: g.group ?? '',
-  label: g.label ?? '',
-  films: (g.films ?? '').split(', '),
+  date: g.date!,
+  source: g.source!,
+  group: g.group!,
+  label: g.label!,
+  films: g.films!.split(', '),
 })
 
 // --- sections --------------------------------------------------------------

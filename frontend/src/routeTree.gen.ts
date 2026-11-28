@@ -45,6 +45,7 @@ import { Route as ImportarPessoaIndexRouteImport } from './routes/importar/$pess
 import { Route as ImportarPessoaAcaoRouteImport } from './routes/importar/$pessoa/acao'
 import { Route as ParticiparPerguntasIndexRouteImport } from './routes/participar/perguntas/index'
 import { Route as ParticiparPerguntasEnviarRouteImport } from './routes/participar/perguntas/enviar'
+import { Route as ParticiparPerguntasGruposRouteImport } from './routes/participar/perguntas/grupos'
 import { Route as PessoasPessoaAcaoRouteImport } from './routes/pessoas/$pessoa/acao'
 import { Route as PessoasNovaEnviarRouteImport } from './routes/pessoas/nova/enviar'
 import { Route as SessoesSessaoEditarPresentesRouteImport } from './routes/sessoes/$sessao/editar-presentes'
@@ -241,6 +242,12 @@ const ParticiparPerguntasEnviarRoute =
     path: '/perguntas/enviar',
     getParentRoute: () => ParticiparRoute,
   } as any)
+const ParticiparPerguntasGruposRoute =
+  ParticiparPerguntasGruposRouteImport.update({
+    id: '/perguntas/grupos',
+    path: '/perguntas/grupos',
+    getParentRoute: () => ParticiparRoute,
+  } as any)
 const PessoasPessoaAcaoRoute = PessoasPessoaAcaoRouteImport.update({
   id: '/pessoas/$pessoa/acao',
   path: '/pessoas/$pessoa/acao',
@@ -342,6 +349,7 @@ export interface FileRoutesByFullPath {
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
   '/participar/perguntas/enviar': typeof ParticiparPerguntasEnviarRoute
+  '/participar/perguntas/grupos': typeof ParticiparPerguntasGruposRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/pessoas/nova/enviar': typeof PessoasNovaEnviarRoute
   '/sessoes/$sessao/editar-presentes': typeof SessoesSessaoEditarPresentesRoute
@@ -391,6 +399,7 @@ export interface FileRoutesByTo {
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
   '/participar/perguntas/enviar': typeof ParticiparPerguntasEnviarRoute
+  '/participar/perguntas/grupos': typeof ParticiparPerguntasGruposRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/pessoas/nova/enviar': typeof PessoasNovaEnviarRoute
   '/sessoes/$sessao/editar-presentes': typeof SessoesSessaoEditarPresentesRoute
@@ -443,6 +452,7 @@ export interface FileRoutesById {
   '/feedback/$sessao/enviar': typeof FeedbackSessaoEnviarRoute
   '/importar/$pessoa/acao': typeof ImportarPessoaAcaoRoute
   '/participar/perguntas/enviar': typeof ParticiparPerguntasEnviarRoute
+  '/participar/perguntas/grupos': typeof ParticiparPerguntasGruposRoute
   '/pessoas/$pessoa/acao': typeof PessoasPessoaAcaoRoute
   '/pessoas/nova/enviar': typeof PessoasNovaEnviarRoute
   '/sessoes/$sessao/editar-presentes': typeof SessoesSessaoEditarPresentesRoute
@@ -495,6 +505,7 @@ export interface FileRouteTypes {
     | '/feedback/$sessao/enviar'
     | '/importar/$pessoa/acao'
     | '/participar/perguntas/enviar'
+    | '/participar/perguntas/grupos'
     | '/pessoas/$pessoa/acao'
     | '/pessoas/nova/enviar'
     | '/sessoes/$sessao/editar-presentes'
@@ -544,6 +555,7 @@ export interface FileRouteTypes {
     | '/feedback/$sessao/enviar'
     | '/importar/$pessoa/acao'
     | '/participar/perguntas/enviar'
+    | '/participar/perguntas/grupos'
     | '/pessoas/$pessoa/acao'
     | '/pessoas/nova/enviar'
     | '/sessoes/$sessao/editar-presentes'
@@ -595,6 +607,7 @@ export interface FileRouteTypes {
     | '/feedback/$sessao/enviar'
     | '/importar/$pessoa/acao'
     | '/participar/perguntas/enviar'
+    | '/participar/perguntas/grupos'
     | '/pessoas/$pessoa/acao'
     | '/pessoas/nova/enviar'
     | '/sessoes/$sessao/editar-presentes'
@@ -903,6 +916,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ParticiparPerguntasEnviarRouteImport
       parentRoute: typeof ParticiparRoute
     }
+    '/participar/perguntas/grupos': {
+      id: '/participar/perguntas/grupos'
+      path: '/perguntas/grupos'
+      fullPath: '/participar/perguntas/grupos'
+      preLoaderRoute: typeof ParticiparPerguntasGruposRouteImport
+      parentRoute: typeof ParticiparRoute
+    }
     '/pessoas/$pessoa/acao': {
       id: '/pessoas/$pessoa/acao'
       path: '/pessoas/$pessoa/acao'
@@ -1038,6 +1058,7 @@ interface ParticiparRouteChildren {
   ParticiparVotosRoute: typeof ParticiparVotosRoute
   ParticiparIndexRoute: typeof ParticiparIndexRoute
   ParticiparPerguntasEnviarRoute: typeof ParticiparPerguntasEnviarRoute
+  ParticiparPerguntasGruposRoute: typeof ParticiparPerguntasGruposRoute
   ParticiparPerguntasIndexRoute: typeof ParticiparPerguntasIndexRoute
 }
 
@@ -1046,6 +1067,7 @@ const ParticiparRouteChildren: ParticiparRouteChildren = {
   ParticiparVotosRoute: ParticiparVotosRoute,
   ParticiparIndexRoute: ParticiparIndexRoute,
   ParticiparPerguntasEnviarRoute: ParticiparPerguntasEnviarRoute,
+  ParticiparPerguntasGruposRoute: ParticiparPerguntasGruposRoute,
   ParticiparPerguntasIndexRoute: ParticiparPerguntasIndexRoute,
 }
 

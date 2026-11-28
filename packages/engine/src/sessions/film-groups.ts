@@ -10,7 +10,7 @@ import { Environment } from '../runtime/Environment.ts'
 import { engineError, type EngineError } from '../runtime/EngineError.ts'
 
 /** How many films and labels each group has. */
-export const GROUP_SIZE = 3
+const GROUP_SIZE = 3
 
 export interface FilmGroup {
   /** The table's key. */

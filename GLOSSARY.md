@@ -222,6 +222,9 @@ _Evitar_: questionário
 "Qual dos dois você gostou mais?", feita a um Presente pelo Link da Sessão: dois filmes que ele ainda não tem como Já visto, escolhidos pela entropia das notas do MovieLens vezes a popularidade (Rashid et al. 2002, #170), porque um filme que muita gente viu e que divide opiniões diz mais sobre quem responde. Escolher um diz que viu os dois; "não vi os dois" pula o par. A resposta fica na Sessão até o Dono gravar ou descartar: gravada, o escolhido vira Nota 3,5 (Força fraca) e o outro, Já visto sem Nota (#181).
 _Evitar_: quiz, duelo, questionário
 
+**Escolha de grupo** [group pick, `GroupPick`; grupo de filmes [film group, `FilmGroup`]]:
+"Qual destes grupos tem mais a sua cara?", feita pelo Link da Sessão, antes das Perguntas par a par, ao Presente que tem menos Notas que o mínimo da Escala. Os grupos ficam em `config/film_groups.toml`: cada um com um nome, 3 filmes e 3 rótulos, feitos uma vez do Tag Genome e revistos à mão. Ele escolhe de 1 a 3 grupos ou nenhum, uma vez por Sessão. A escolha espera na Sessão, com as respostas par a par, até o Dono gravar ou descartar. Gravada, cada grupo vira uma Escolha de grupo no arquivo da Pessoa (`## Escolhas de grupo`), e os 3 filmes dele viram sementes fracas da vizinhança do MovieLens. Não é Nota nem Já visto, e fica fora da Escala, da Calibração e dos Vizinhos de gosto. Os rótulos só mostram o grupo (#405, #415).
+
 **Motivo** [reason, `Reason`]:
 Uma razão para um filme estar na Recomendação.
 _Evitar_: justificativa, explicação
