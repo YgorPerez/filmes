@@ -9,7 +9,7 @@ import { longestOf, scan, type Reader } from '../reader.ts'
 import { phraseOf, type Phrase } from '../words.ts'
 
 /** How a Programa reads on the page. */
-export const presetLabel = (name: string) => `Programa: ${name}`
+const presetLabel = (name: string) => `Programa: ${name}`
 
 export const presetReader: Reader = {
   field: 'preset',
