@@ -422,7 +422,7 @@ const recommendInSession = (
       ...(shortfall && { shortfall }),
     }
     const context = sessionContext(
-      asking.request ?? null,
+      asking.request || null,
       recommendation.moods,
       asked,
     )

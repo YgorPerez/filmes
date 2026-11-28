@@ -38,6 +38,11 @@ const ask = (page: Page) =>
 const mood = (page: Page, name: string) =>
   page.getByRole('region', { name: 'Clima' }).getByRole('checkbox', { name })
 
+/** Nova Sessão once it has hydrated: the bar by Recomendar says the night
+ * only then, and a click before it posts the form plainly. */
+const newSessionReady = (page: Page) =>
+  expect(page.getByText('Só você · escolha quem mais')).toBeVisible()
+
 const openedId = (page: Page) =>
   decodeURIComponent(new URL(page.url()).pathname.split('/').at(-1) ?? '')
 
@@ -133,6 +138,7 @@ test('“Ler” fills the form from one sentence and says what it left out', asy
   // Reads only, so both projects run it: no Session is opened.
   await loginAsBruno(page)
   await page.goto('/sessoes/nova')
+  await newSessionReady(page)
   await snap(page, info, 'sessoes-nova-frase-vazia')
 
   // "Ler" with no sentence: the page says so, in place (#235).
@@ -187,6 +193,7 @@ test('the form says why it refused, and “o gosto de uma Pessoa” orders', asy
   test.skip(info.project.name !== 'mobile', 'one group per project')
   await loginAsBruno(page)
   await page.goto('/sessoes/nova')
+  await newSessionReady(page)
 
   // No Presente: the page refuses before the engine, in place, with the
   // form as it was (#235).
@@ -746,4 +753,77 @@ test('the Dono deletes a Session and its Link shows that it was deleted', async 
     page.getByRole('heading', { name: 'Esta Sessão foi excluída' }),
   ).toBeVisible()
   await snap(page, info, 'excluir-sessao-link')
+})
+
+// --- editing the request (#372) -------------------------------------------------
+
+/** Opens a Session as Bruno, through the engine; gives its id. */
+const openIdAsBruno = async (request: Parameters<typeof recommendSession>[0]) =>
+  (await openAsBruno(request)).session.id
+
+/** The edit form, reached from the Session page's ⋯ menu, filled with
+ * what Session `id` asked. */
+async function editForm(page: Page, id: string) {
+  await page.goto(`/sessoes/${id}`)
+  await openMenu(page)
+  await page.getByRole('link', { name: 'Editar pedido' }).click()
+  await expect(page).toHaveURL(new RegExp(`/sessoes/${id}/pedido$`))
+  const form = page.getByRole('form', { name: 'Editar o pedido da Sessão' })
+  await expect(form.getByLabel('O pedido', { exact: false })).toHaveValue(
+    'algo bom',
+  )
+  await expect(form.getByLabel('Duração máxima', { exact: false })).toHaveValue(
+    '150',
+  )
+  return form
+}
+
+test('the Dono edits the request from the Session page and the Session is redone', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop', 'one Session per project')
+  const asked = { attendees: ['bruno', 'iara'], count: 3, maxDuration: 150 }
+  const id = await openIdAsBruno({ ...asked, request: 'algo bom' })
+  await loginAsBruno(page)
+  const form = await editForm(page, id)
+  await form.getByLabel('O pedido', { exact: false }).fill('algo curto')
+  await form.getByLabel('Duração máxima', { exact: false }).fill('120')
+  await form.getByText('Mais opções', { exact: true }).click()
+  await form.getByRole('checkbox', { name: 'Nada lento' }).check()
+  await snap(page, info, 'sessao-editar-pedido')
+  await form.getByRole('button', { name: 'Salvar e refazer' }).click()
+
+  await expect(page).toHaveURL(
+    new RegExp(`/sessoes/${id}\\?feito=regerada(&nota=[^&]+)?$`),
+  )
+  await snap(page, info, 'sessao-editada')
+  expect(await sessionFile(id)).toMatchObject({
+    version: 2,
+    request: 'algo curto',
+    constraints: ['até 2h', 'nada lento'],
+  })
+})
+
+test('a told Session and a Dono who was not there get no form', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'desktop', 'one Session per project')
+  const told = await openIdAsBruno({ attendees: ['bruno', 'vera'], count: 3 })
+  await engineRun((engine) =>
+    engine.run(recordFeedback({ session: told, film: null })),
+  )
+  const other = await openIdAsBruno({ attendees: ['bruno', 'iara'], count: 3 })
+
+  await loginAsBruno(page)
+  await page.goto(`/sessoes/${told}/pedido`)
+  await expect(page.getByText('Esta Sessão já foi contada')).toBeVisible()
+  await expect(page.getByRole('form')).toHaveCount(0)
+
+  await page.context().clearCookies()
+  await loginAs(page, 'vera@example.org')
+  await page.goto(`/sessoes/${other}/pedido`)
+  await expect(
+    page.getByText('Só quem estava na Sessão edita o pedido dela.'),
+  ).toBeVisible()
+  await expect(page.getByRole('form')).toHaveCount(0)
 })

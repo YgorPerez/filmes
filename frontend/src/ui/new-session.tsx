@@ -644,7 +644,7 @@ function Rule({ options, asked }: { options: RequestOptions; asked: Asked }) {
 
 /** The Série na ordem (#165): three modes, the default checked and
  * marked. */
-function SeriesOrder({ asked }: { asked: Asked }) {
+export function SeriesOrder({ asked }: { asked: Asked }) {
   const { form } = SESSIONS
   return (
     <Section
@@ -685,7 +685,13 @@ function SeriesOrder({ asked }: { asked: Asked }) {
   )
 }
 
-function Moods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
+export function Moods({
+  moods,
+  asked,
+}: {
+  moods: readonly string[]
+  asked: Asked
+}) {
   const { form } = SESSIONS
   const chosen = new Set(asked.moods)
   return (
@@ -737,7 +743,7 @@ function NoMoods({ moods, asked }: { moods: readonly string[]; asked: Asked }) {
   )
 }
 
-function Constraints({
+export function Constraints({
   asked,
   moods,
 }: {

@@ -11,6 +11,7 @@ import {
   PENDING_FEEDBACK_PATH,
   sessionDeletePath,
 } from '#/content/session-paths'
+import { sessionEditPath } from '#/content/session-edit'
 import type { CartazPage } from '#/platform/billboard'
 import type { PageReading } from '#/platform/reading'
 import type { SessionItem } from '#/platform/sessions'
@@ -23,6 +24,7 @@ import { Slip } from './kit/slip'
 import { buttonVariants } from './kit/button-variants'
 import { Alert, PostFailed } from './kit/status'
 import { names } from './session-names'
+import { SESSION_EDIT } from './session-edit.copy'
 import { Avatars, SessionDate, NewSessionLink } from './session-parts'
 import { ChosenReactions } from './billboard-chosen'
 import { Icon } from './kit/icon'
@@ -285,20 +287,14 @@ function SessionHead({ page }: { page: CartazPage }) {
           <span className="min-w-0 truncate">{names(s.attendees)}</span>
         </p>
       </div>
-      {menu && <SessionMenu page={page} canEditAttendees={canEditAttendees} />}
+      {menu && <SessionMenu page={page} />}
     </header>
   )
 }
 
-/** The head's ⋯ menu: "Contar como foi" while open, editing the Presentes
- * (#371), deleting the Session (#370) and the Link para os Presentes. */
-function SessionMenu({
-  page,
-  canEditAttendees,
-}: {
-  page: CartazPage
-  canEditAttendees: boolean
-}) {
+/** The head's ⋯ menu: the Session's actions and the Link para os
+ * Presentes. */
+function SessionMenu({ page }: { page: CartazPage }) {
   const s = page.session
   return (
     <details
@@ -313,40 +309,59 @@ function SessionMenu({
         <span aria-hidden="true">⋯</span>
       </summary>
       <div className="absolute top-full right-0 z-20 mt-xs flex w-[240px] max-w-[calc(100vw-32px)] flex-col rounded-card border border-rule bg-surface p-xs">
-        <ul className="flex flex-col">
-          {s.open && (
-            <li>
-              <a href={feedbackPath(s.id)} className={MENU_ROW}>
-                <Icon name="film" />
-                {SESSIONS.list.feedback}
-              </a>
-            </li>
-          )}
-          {canEditAttendees && (
-            <li>
-              <a
-                href={`${sessionPath(s.id)}?editar=presentes`}
-                className={MENU_ROW}
-              >
-                <Icon name="people" />
-                {SESSIONS.editAttendees.title}
-              </a>
-            </li>
-          )}
-          {page.deletion && (
-            <li>
-              <SessionDelete
-                action={sessionDeletePath(s.id)}
-                hasFacts={page.deletion.hasFacts}
-              />
-            </li>
-          )}
-        </ul>
+        <HeadActions page={page} />
         {page.sessionLink && (
           <ShareSessionLink key={s.id} url={page.sessionLink} />
         )}
       </div>
     </details>
+  )
+}
+
+/** The ⋯ menu's actions: "Contar como foi" while open; for a Dono who was
+ * there, "Editar Presentes" (#371) and, while open, "Editar pedido" (#372);
+ * and "Excluir" (#370) when the page allows deleting. */
+function HeadActions({ page }: { page: CartazPage }) {
+  const s = page.session
+  const canEditAttendees = s.attendees.some((attendee) => attendee.owner)
+  return (
+    <ul className="flex flex-col">
+      {s.open && (
+        <li>
+          <a href={feedbackPath(s.id)} className={MENU_ROW}>
+            <Icon name="film" />
+            {SESSIONS.list.feedback}
+          </a>
+        </li>
+      )}
+      {canEditAttendees && (
+        <li>
+          <a
+            href={`${sessionPath(s.id)}?editar=presentes`}
+            className={MENU_ROW}
+          >
+            <Icon name="people" />
+            {SESSIONS.editAttendees.title}
+          </a>
+        </li>
+      )}
+      {s.open && canEditAttendees && (
+        <li>
+          <a href={sessionEditPath(s.id)} className={MENU_ROW}>
+            <Icon name="tools" />
+            {SESSION_EDIT.menu}
+          </a>
+        </li>
+      )}
+      {page.deletion && (
+        <li>
+          <SessionDelete
+            action={sessionDeletePath(s.id)}
+            hasFacts={page.deletion.hasFacts}
+          />
+        </li>
+      )}
+    </ul>
   )
 }
 

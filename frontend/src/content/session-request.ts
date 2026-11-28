@@ -184,9 +184,10 @@ const present = <T extends object>(value: T): T =>
     Object.entries(value).filter(([, v]) => v !== undefined),
   ) as T
 
-function read(form: FormData): SessionRequestForm {
-  return present({
-    ...attendeesAndRule(form),
+/** The request and the Restrições: what the form asks besides who and
+ * the Regra. */
+const contextOf = (form: FormData): SessionRequestEditForm =>
+  present({
     moods: all(form, 'climas'),
     count: integer(form, 'quantos', [1, 50], 'quantos'),
     request: field(form, 'pedido'),
@@ -202,6 +203,9 @@ function read(form: FormData): SessionRequestForm {
     noMoods: chips(form, 'sem-climas'),
     seriesOrder: seriesOrder(form),
   })
+
+function read(form: FormData): SessionRequestForm {
+  return { ...attendeesAndRule(form), ...contextOf(form) }
 }
 
 /** The form as the engine's request, or why the page refuses it. The
@@ -211,6 +215,26 @@ export function parseSessionRequest(
 ): { ok: SessionRequestForm } | { refused: SessionRequestRefusal } {
   try {
     return { ok: read(form) }
+  } catch (error) {
+    if (error instanceof Refused) return { refused: error.refusal }
+    throw error
+  }
+}
+
+/** What the edit form of an open Session asks (#372): the request and the
+ * Restrições, with no Presentes nor Regra (the engine's
+ * `SessionRequestEdit`). */
+export type SessionRequestEditForm = Omit<
+  SessionRequestForm,
+  'attendees' | 'rule' | 'by'
+>
+
+/** The edit form as the engine's edit, or why the page refuses it. */
+export function parseSessionEdit(
+  form: FormData,
+): { ok: SessionRequestEditForm } | { refused: SessionRequestRefusal } {
+  try {
+    return { ok: contextOf(form) }
   } catch (error) {
     if (error instanceof Refused) return { refused: error.refusal }
     throw error
