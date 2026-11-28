@@ -331,7 +331,10 @@ test('only the logged-in Dono votes as the opener; a visitor with the link canno
     )
     if (!url) throw new Error('Expected a Session link')
     // The Votar button's address: the link's swipe, as the opener.
-    const asOpener = { ...Object.fromEntries(new URL(url).searchParams), presente: 'bruno' }
+    const asOpener = {
+      ...Object.fromEntries(new URL(url).searchParams),
+      presente: 'bruno',
+    }
     const post = (viewer: string | null, body: string) =>
       voteAction(
         new Request(
@@ -364,10 +367,18 @@ test('only the logged-in Dono votes as the opener; a visitor with the link canno
     // her, and nothing is recorded.
     for (const viewer of [null, 'vera']) {
       expect(
-        (await resolveSessionLink(sessionLinkSearch(asOpener), engine, database, viewer))
-          ?.selected,
+        (
+          await resolveSessionLink(
+            sessionLinkSearch(asOpener),
+            engine,
+            database,
+            viewer,
+          )
+        )?.selected,
       ).toBeNull()
-      expect(await voteDeck(sessionLinkSearch(asOpener), engine, database, viewer)).toBeNull()
+      expect(
+        await voteDeck(sessionLinkSearch(asOpener), engine, database, viewer),
+      ).toBeNull()
       const refused = await post(viewer, `versao=1&nao=${b}`)
       expect(refused.status).toBe(303)
       expect(refused.headers.get('location')).toMatch(/^\/participar\?/)
@@ -376,7 +387,8 @@ test('only the logged-in Dono votes as the opener; a visitor with the link canno
 
     // Logged in as her: her deck, and her no swaps the film as a guest's.
     expect(
-      (await voteDeck(sessionLinkSearch(asOpener), engine, database, 'bruno'))?.films,
+      (await voteDeck(sessionLinkSearch(asOpener), engine, database, 'bruno'))
+        ?.films,
     ).toHaveLength(3)
     const voted = await post('bruno', `versao=1&sim=${a}&nao=${b}`)
     expect(

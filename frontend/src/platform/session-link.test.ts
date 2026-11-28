@@ -99,13 +99,13 @@ test('the public Session link follows the current version until Feedback closes 
     expect(
       (await read({ ...search, presente: 'bruno' }, 'vera'))?.selected,
     ).toBeNull()
-    expect(
-      await read({ ...search, presente: 'bruno' }, 'bruno'),
-    ).toMatchObject({
-      selected: { ...bruno, owner: true },
-      films: [{ id: film.id }],
-      questions: 0,
-    })
+    expect(await read({ ...search, presente: 'bruno' }, 'bruno')).toMatchObject(
+      {
+        selected: { ...bruno, owner: true },
+        films: [{ id: film.id }],
+        questions: 0,
+      },
+    )
 
     await fixture.ok(
       recordFeedback({ session, film: null }),
