@@ -787,3 +787,10 @@ export {
   type TasteSummary,
   type TasteSummaryRequest,
 } from './people/taste-summary.ts'
+export {
+  personCompatibility,
+  type Compatibility,
+  type CompatibilityFilm,
+  type CompatibilityRequest,
+  type PairCompatibility,
+} from './people/compatibility.ts'

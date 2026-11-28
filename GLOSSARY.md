@@ -297,6 +297,10 @@ _Evitar_: ajuste (é outra coisa), correção de viés
 **Erro da Nota prevista** [prediction error, `predictionError`]:
 A média das diferenças absolutas [mean absolute error, `meanAbsoluteError`] entre a Nota prevista calibrada e a Nota da Pessoa, na escala de 1 a 10. A página da Pessoa usa os filmes comparados na Calibração e mostra a média junto do número de filmes, a partir de `[rating_percentile] min_ratings`.
 
+**Compatibilidade** [compatibility, `compatibility`]:
+O quanto duas Pessoas concordam nos filmes a que as duas deram Nota, de 0 a 1: 1 menos a diferença média entre o percentil de cada Nota, cada uma na Escala de quem a deu. Só entra quem divide `[compatibility] min_shared` filmes ou mais. A página da Pessoa a mostra com cada outra Pessoa, com os filmes em que mais concordam e os em que mais discordam. A Nota da Pergunta par a par fica fora. Não é Evidência.
+_Evitar_: afinidade, match
+
 **Palpite** [guess, `guess`]:
 Um Motivo sem Fato que o sustente.
 _Evitar_: chute, inferência

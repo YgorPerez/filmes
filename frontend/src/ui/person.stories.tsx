@@ -118,6 +118,7 @@ const IARA: PersonPage = {
   ],
   sessions: { total: 0, recent: [], satisfaction: null },
   imported: false,
+  compatibility: null,
   likes: {
     person: 'iara',
     liked: 3,

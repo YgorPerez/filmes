@@ -234,6 +234,7 @@ function fakePeople(
       output: { total: 0, recent: [], satisfaction: null },
     }),
     taste: async () => failure('unknown_person'),
+    compatibility: async () => failure('unknown_person'),
     tagGroups: async () => ({ exitCode: 0, output: [] }),
     email: async () => ({ exitCode: 0, output: null }),
     act: async (person, action, owner) => {
@@ -599,6 +600,12 @@ describe('peopleFromEngine', () => {
       expect(page.imported).toBe(false)
       expect(page.likes?.person).toBe('quim')
       expect(page.likes?.liked).toBeTypeOf('number')
+      // Quim shares 4 films with Bruno, fewer than the minimum of 10.
+      expect(page.compatibility).toEqual({
+        person: 'quim',
+        minShared: 10,
+        others: [],
+      })
       expect(page.sessions).toEqual({
         total: 0,
         recent: [],

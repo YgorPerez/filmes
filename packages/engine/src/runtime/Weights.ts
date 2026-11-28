@@ -70,6 +70,9 @@ export const Weights = Schema.Struct({
   prediction_calibration: Schema.Struct({
     pseudo_count: Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0)),
   }),
+  /** The Compatibilidade between Pessoas (#403): the fewest films both
+   * rated for a pair to count, and how many films each side lists. */
+  compatibility: Schema.Struct({ min_shared: Count, films: Count }),
   /** The Aposta (#178): its place (0: none), the lowest mean Nota
    * prevista, 1 to 10, and how many Facts it may have. */
   bet: Schema.Struct({
