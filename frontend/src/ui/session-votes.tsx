@@ -14,7 +14,7 @@ import {
 } from '#/content/session-votes-address'
 import type { VoteDeck } from '#/platform/session-votes'
 import { buttonVariants } from './kit/button-variants'
-import { useFetchForm } from './kit/fetch-form'
+import { useFetchForm, useHydrated } from './kit/fetch-form'
 import { Icon } from './kit/icon'
 import { Alert, Notice, PostFailed } from './kit/status'
 import { Sticker } from './kit/sticker'
@@ -22,6 +22,8 @@ import { FilmSheet } from './film-sheet'
 import { LinkFilmList, VotedActions, VoteRule } from './session-link'
 import { PARTICIPATION } from './session-link.copy'
 import { VOTES } from './session-votes.copy'
+import { useOrder } from './vote-order'
+import { VoteRanking } from './vote-ranking'
 
 // The group swipe's deck (#182, #275, #377): one film at a time over the
 // whole screen, Tinder-like: the poster, and on a translucent band at the
@@ -32,11 +34,15 @@ import { VOTES } from './session-votes.copy'
 // full sheet (`film-sheet.tsx`), where she can vote too. What a não does
 // stays over the card. After the last film, the recap, where a tap flips a
 // Voto, and Enviar votos, the screen's one orange button, which posts
-// every Voto at once. A screen reader hears each new card. Her standing
+// every Voto at once; with two or more sins, Pôr em ordem leads first to
+// her Ordem (#379, `vote-ranking.tsx`), whose Enviar votos posts it too. A screen reader hears each new card. Her standing
 // Votos on the screen go again with the new ones: her latest submission is
 // the one that counts.
 
 type Vote = 'yes' | 'no'
+
+/** Where the deck is: a card up, the recap, or her Ordem. */
+type Step = 'cards' | 'recap' | 'ranking'
 
 /** How far the card must be dragged to count as a Voto, in pixels. */
 const SWIPE = 60
@@ -88,7 +94,18 @@ function useVotes(films: readonly Film[], kept: readonly Vote[] = []) {
   const change = (i: number, to: Vote) =>
     setVotes((v) => v.map((vote, j) => (j === i ? to : vote)))
   const restart = () => setVotes([])
-  return { votes, said, film, heading, recap, cast, back, change, restart }
+  return {
+    votes,
+    said,
+    say: setSaid,
+    film,
+    heading,
+    recap,
+    cast,
+    back,
+    change,
+    restart,
+  }
 }
 
 /** The arrow keys vote while a card is up, outside the fields. */
@@ -148,6 +165,128 @@ function useSwipe(cast: (vote: Vote) => void, tap: () => void) {
   }
 }
 
+/** What the form posts: the version, her standing Votos (a standing sim
+ * she took out from her Ordem goes as não), the deck's Votos and, from her
+ * Ordem, the sins in order (#379). */
+function DeckFields({
+  version,
+  standing,
+  undone,
+  films,
+  votes,
+  ranking,
+}: {
+  version: number
+  standing: readonly Film[]
+  undone: ReadonlySet<string>
+  films: readonly Film[]
+  votes: readonly Vote[]
+  ranking: readonly Film[]
+}) {
+  return (
+    <>
+      <input type="hidden" name="versao" value={version} />
+      {standing.map((f) => (
+        <input
+          key={f.id}
+          type="hidden"
+          name={f.mine === 'yes' && !undone.has(f.id) ? 'sim' : 'nao'}
+          value={f.id}
+        />
+      ))}
+      {votes.map((vote, i) => (
+        <input
+          key={films[i]?.id}
+          type="hidden"
+          name={vote === 'yes' ? 'sim' : 'nao'}
+          value={films[i]?.id}
+        />
+      ))}
+      {ranking.map((f) => (
+        <input key={f.id} type="hidden" name="ordem" value={f.id} />
+      ))}
+    </>
+  )
+}
+
+/** The deck's films and her Votos on them: on Mudar votos, every film,
+ * hers first and already chosen, so she opens on the recap, or on the
+ * films still without a Voto (#340); else only the ones without, and her
+ * standing Votos go again as they are. */
+function deckParts(deck: VoteDeck, revote: boolean) {
+  const voted = deck.films.filter((f) => f.mine)
+  const unvoted = deck.films.filter((f) => !f.mine)
+  return revote
+    ? {
+        films: [...voted, ...unvoted],
+        standing: [],
+        kept: voted.flatMap((f) => (f.mine ? [f.mine] : [])),
+      }
+    : { films: unvoted, standing: voted, kept: [] }
+}
+
+/** A card up, and its full sheet when she opens it; the arrow keys vote
+ * while the sheet is closed. */
+function CardStep({
+  film,
+  place,
+  total,
+  people,
+  heading,
+  cast,
+  back,
+}: {
+  film: Film
+  place: number
+  total: number
+  people: VoteDeck['people']
+  heading: RefObject<HTMLHeadingElement | null>
+  cast: (vote: Vote) => void
+  back: (() => void) | null
+}) {
+  const [sheet, setSheet] = useState(false)
+  useArrowKeys(!sheet, cast)
+  const close = () => {
+    setSheet(false)
+    heading.current?.focus()
+  }
+  return (
+    <>
+      <VoteCard
+        film={film}
+        place={place}
+        total={total}
+        viewer={people.find((p) => p.owner)?.slug ?? null}
+        heading={heading}
+        cast={cast}
+        back={back}
+        open={() => setSheet(true)}
+      />
+      {sheet && (
+        <FilmSheet
+          film={{
+            title: film.title,
+            originalTitle: film.card?.originalTitle ?? null,
+            poster: film.card?.poster ?? null,
+          }}
+          sheet={film.sheet}
+          people={people}
+          onClose={close}
+        >
+          <div className="sticky bottom-0 rounded-panel bg-case py-md">
+            <VoteButtons
+              cast={(vote) => {
+                setSheet(false)
+                cast(vote)
+              }}
+            />
+          </div>
+        </FilmSheet>
+      )}
+    </>
+  )
+}
+
 export function VoteCards({
   deck,
   revote = false,
@@ -163,30 +302,36 @@ export function VoteCards({
   action: string
   onSubmit?: FormEventHandler<HTMLFormElement>
   sending?: boolean
-  /** What goes above the cards, told whether she is on the recap, so the
-   * page's title can say so. */
-  header?: (reviewing: boolean) => ReactNode
+  /** What goes above the cards, told the step she is on, so the page's
+   * title can say so. */
+  header?: (step: Step) => ReactNode
 }) {
-  const voted = deck.films.filter((f) => f.mine)
-  const unvoted = deck.films.filter((f) => !f.mine)
-  // Mudar votos: every film, hers first and already chosen, so she opens
-  // on the recap, or on the films still without a Voto (#340).
-  const films = revote ? [...voted, ...unvoted] : unvoted
-  const standing = revote ? [] : voted
-  const kept = revote ? voted.flatMap((f) => (f.mine ? [f.mine] : [])) : []
-  const { votes, said, film, heading, recap, cast, back, change, restart } =
-    useVotes(films, kept)
-  const [sheet, setSheet] = useState(false)
-  useArrowKeys(film !== undefined && !sheet, cast)
-  const reviewing = film === undefined
-  const viewer = deck.people.find((p) => p.owner)?.slug ?? null
-  const close = () => {
-    setSheet(false)
-    heading.current?.focus()
-  }
+  const { films, standing, kept } = deckParts(deck, revote)
+  const {
+    votes,
+    said,
+    say,
+    film,
+    heading,
+    recap,
+    cast,
+    back,
+    change,
+    restart,
+  } = useVotes(films, kept)
+  const order = useOrder({
+    deck,
+    films,
+    votes,
+    standing,
+    recap,
+    say,
+    drop: (i) => change(i, 'no'),
+  })
+  const step: Step = film ? 'cards' : order.on ? 'ranking' : 'recap'
   return (
     <>
-      {header?.(reviewing)}
+      {header?.(step)}
       <form
         method="post"
         action={action}
@@ -194,60 +339,36 @@ export function VoteCards({
         aria-busy={sending}
         className="flex flex-col gap-lg"
       >
-        <input type="hidden" name="versao" value={deck.version} />
-        {standing.map((f) => (
-          <input
-            key={f.id}
-            type="hidden"
-            name={f.mine === 'yes' ? 'sim' : 'nao'}
-            value={f.id}
-          />
-        ))}
-        {votes.map((vote, i) => (
-          <input
-            key={films[i]?.id}
-            type="hidden"
-            name={vote === 'yes' ? 'sim' : 'nao'}
-            value={films[i]?.id}
-          />
-        ))}
+        <DeckFields
+          version={deck.version}
+          standing={standing}
+          undone={order.undone}
+          films={films}
+          votes={votes}
+          ranking={step === 'ranking' ? order.films : []}
+        />
         <p role="status" className="sr-only">
           {sending ? VOTES.sending : said}
         </p>
         {film ? (
-          <>
-            <VoteCard
-              film={film}
-              place={votes.length + 1}
-              total={films.length}
-              viewer={viewer}
-              heading={heading}
-              cast={cast}
-              back={votes.length > 0 ? back : null}
-              open={() => setSheet(true)}
-            />
-            {sheet && (
-              <FilmSheet
-                film={{
-                  title: film.title,
-                  originalTitle: film.card?.originalTitle ?? null,
-                  poster: film.card?.poster ?? null,
-                }}
-                sheet={film.sheet}
-                people={deck.people}
-                onClose={close}
-              >
-                <div className="sticky bottom-0 rounded-panel bg-case py-md">
-                  <VoteButtons
-                    cast={(vote) => {
-                      setSheet(false)
-                      cast(vote)
-                    }}
-                  />
-                </div>
-              </FilmSheet>
-            )}
-          </>
+          <CardStep
+            film={film}
+            place={votes.length + 1}
+            total={films.length}
+            people={deck.people}
+            heading={heading}
+            cast={cast}
+            back={votes.length > 0 ? back : null}
+          />
+        ) : step === 'ranking' ? (
+          <VoteRanking
+            films={order.films}
+            people={deck.people}
+            sending={sending}
+            move={order.move}
+            drop={order.drop}
+            back={order.leave}
+          />
         ) : (
           <VoteRecap
             films={films}
@@ -255,8 +376,12 @@ export function VoteCards({
             sending={sending}
             heading={recap}
             change={change}
-            restart={restart}
+            restart={() => {
+              order.reset()
+              restart()
+            }}
             revote={revote}
+            rank={order.start}
           />
         )}
       </form>
@@ -304,8 +429,11 @@ type Gesture = (typeof BUTTONS)[number]['vote']
 const isVote = (gesture: Gesture): gesture is Vote =>
   gesture === 'yes' || gesture === 'no'
 
-/** The four round buttons, each with its word under it. */
+/** The four round buttons, each with its word under it. Before the page
+ * hydrates they do nothing, so they wait disabled: a tap then would be
+ * lost. */
 function VoteButtons({ cast }: { cast: (vote: Vote) => void }) {
+  const live = useHydrated()
   return (
     <div className="flex items-end justify-center gap-lg">
       {BUTTONS.map((button) => (
@@ -313,10 +441,11 @@ function VoteButtons({ cast }: { cast: (vote: Vote) => void }) {
           key={button.vote}
           type="button"
           hidden={!isVote(button.vote)}
+          disabled={!live}
           onClick={() => {
             if (isVote(button.vote)) cast(button.vote)
           }}
-          className="flex cursor-pointer flex-col items-center gap-xs font-display text-control text-case-ink"
+          className="flex cursor-pointer flex-col items-center gap-xs font-display text-control text-case-ink disabled:cursor-default disabled:opacity-60"
         >
           <span
             className={`grid ${button.size} place-items-center rounded-full border-2 bg-case/70 ${button.ring}`}
@@ -502,6 +631,7 @@ function VoteRecap({
   change,
   restart,
   revote,
+  rank,
 }: {
   films: readonly Film[]
   votes: readonly Vote[]
@@ -511,6 +641,8 @@ function VoteRecap({
   restart: () => void
   /** Mudar votos: her earlier Votos are the ones chosen. */
   revote: boolean
+  /** Leads to her Ordem, with two or more sins; else the recap sends. */
+  rank: (() => void) | null
 }) {
   const yes = votes.filter((v) => v === 'yes').length
   const leaving = films.filter((_, i) => votes[i] === 'no').map((f) => f.title)
@@ -543,9 +675,20 @@ function VoteRecap({
         <p className="font-display font-bold">{VOTES.leaving(leaving)}</p>
       )}
       <div className="flex flex-wrap items-center gap-lg">
-        <button type="submit" className={buttonVariants()} disabled={sending}>
-          {sending ? VOTES.sending : VOTES.send}
-        </button>
+        {rank ? (
+          <button
+            type="button"
+            onClick={rank}
+            className={buttonVariants()}
+            disabled={sending}
+          >
+            {VOTES.rankStart}
+          </button>
+        ) : (
+          <button type="submit" className={buttonVariants()} disabled={sending}>
+            {sending ? VOTES.sending : VOTES.send}
+          </button>
+        )}
         <button
           type="button"
           onClick={restart}
@@ -795,10 +938,14 @@ export function VoteScreen({
   }
   const screen = screenOf(deck, search, failed)
   const sent = Boolean(feito) && !failed
-  const header = (reviewing: boolean) => (
+  const header = (step: Step) => (
     <>
       <h1 id="votar" className="font-display text-page-title text-balance">
-        {reviewing ? VOTES.review : screenTitle(screen, deck, sent, erro)}
+        {step === 'recap'
+          ? VOTES.review
+          : step === 'ranking'
+            ? VOTES.rankPage
+            : screenTitle(screen, deck, sent, erro)}
       </h1>
       {sent && feito && <Notice>{VOTES.notices[feito]}</Notice>}
       {refusal && <Alert>{VOTES.refusals[refusal](owner)}</Alert>}
@@ -808,7 +955,7 @@ export function VoteScreen({
   const voting = screen === 'vote' && deck !== null
   return (
     <section aria-labelledby="votar" className="flex flex-col gap-lg">
-      {!voting && header(false)}
+      {!voting && header('cards')}
       {screen === 'stuck' && <BackToList home={home} plain />}
       {screen === 'none' && <BackToList home={home} plain={false} />}
       {screen === 'vote' && deck && (

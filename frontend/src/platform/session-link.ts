@@ -4,6 +4,7 @@ import {
   currentVersion,
   filmCards,
   isOpen,
+  latestRanking,
   latestVotes,
   pairwiseQuestions,
   readPeople,
@@ -61,6 +62,9 @@ export type SessionLinkView = {
   films: LinkFilm[]
   /** The films her no took out of the Session, by title. */
   left: string[]
+  /** Her Ordem of her latest submission (#379), films of the screen only;
+   * absent when she has none. */
+  ranking?: string[]
   /** How many Perguntas par a par are left for her (0 without one). */
   questions: number
 }
@@ -169,7 +173,7 @@ async function screenOf(
   session: string,
   person: string,
   engine: Engine,
-): Promise<Pick<SessionLinkView, 'films' | 'left' | 'questions'>> {
+): Promise<Pick<SessionLinkView, 'films' | 'left' | 'questions' | 'ranking'>> {
   const current = currentVersion(front)
   const screen = shownFilms(current)
   const mine = latestVotes(front, person)
@@ -184,7 +188,11 @@ async function screenOf(
   )
   const onScreen = new Set(screen.map((f) => f.id))
   const asked = await engine.run(pairwiseQuestions({ session, person }))
+  const ranking = (latestRanking(front, person) ?? []).filter((film) =>
+    onScreen.has(film),
+  )
   return {
+    ...(ranking.length > 0 && { ranking }),
     questions: asked.exitCode === 0 ? asked.output.pairs.length : 0,
     films: screen.map((film) => {
       const card = byId.get(film.id) ?? null

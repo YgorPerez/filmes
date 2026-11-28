@@ -1,5 +1,5 @@
-// The group swipe: one film at a time, Não or Sim, the recap, and the
-// night's list after the Votos went.
+// The group swipe: one film at a time, Não or Sim, the recap, her Ordem,
+// and the night's list after the Votos went.
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, within } from 'storybook/test'
 import { VoteCards, VoteScreen } from './session-votes'
@@ -83,6 +83,28 @@ export const Recap: Story = {
     await expect(
       canvas.getByRole('heading', { name: VOTES.summary(3, 0) }),
     ).toBeVisible()
+  },
+}
+
+/** Her Ordem (#379): three sins, the handle moves the last one up. */
+export const Ranking: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    for (const name of [VOTES.yes, VOTES.yes, VOTES.yes, VOTES.rankStart])
+      await userEvent.click(canvas.getByRole('button', { name }))
+    await expect(
+      canvas.getByRole('heading', { level: 1, name: VOTES.rankPage }),
+    ).toBeVisible()
+    canvas
+      .getByRole('button', { name: VOTES.rankMove('Noite de Estreia', 3, 3) })
+      .focus()
+    await userEvent.keyboard('{ArrowUp}')
+    await expect(
+      canvas.getByRole('button', {
+        name: VOTES.rankMove('Noite de Estreia', 2, 3),
+      }),
+    ).toBeVisible()
+    await expect(canvas.getByRole('button', { name: VOTES.send })).toBeVisible()
   },
 }
 

@@ -297,7 +297,7 @@ export {
   castVotes,
   votedBy,
   latestVotes,
-  yesVotes,
+  latestRanking,
   type CastVotes,
   type CastVotesRequest,
   type VoteValue,

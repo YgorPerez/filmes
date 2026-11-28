@@ -538,7 +538,11 @@ async function voteYesNoYes(
   await expect(participant.getByRole('heading', { name: first })).toBeVisible()
   await snap(participant, info, 'sessao-votar')
 
-  // A tap on the full-screen card opens its full sheet (#377).
+  // A tap on the full-screen card opens its full sheet (#377), once the
+  // page hydrated: the buttons wait disabled until then.
+  await expect(
+    participant.getByRole('button', { name: 'Sim', exact: true }),
+  ).toBeEnabled()
   await participant.getByRole('article').click({ position: { x: 24, y: 260 } })
   const sheet = participant.getByRole('dialog')
   await expect(sheet.getByRole('heading', { name: first })).toBeVisible()
@@ -577,6 +581,8 @@ async function sendVotesSwapping(
   await participant.evaluate(() => {
     document.documentElement.dataset.votePage = 'original'
   })
+  // Two sins: her Ordem comes before the send (#379); she keeps it.
+  await participant.getByRole('button', { name: 'Pôr em ordem' }).click()
   try {
     await participant.getByRole('button', { name: 'Enviar votos' }).click()
     await expect(
@@ -635,25 +641,35 @@ test('each Presente votes on the films; a no swaps the film and the Session is r
   })
 })
 
-/** One earlier yes of each `[who, film]`, on the first version. */
-async function castEarlierYes(
+/** `who` says yes to `films` on the first version, in that Ordem when
+ * `ranked` (#379). */
+async function castYes(
   session: string,
-  yeses: readonly (readonly [string, string])[],
+  who: string,
+  films: readonly string[],
+  ranked: boolean,
 ) {
-  for (const [who, film] of yeses)
-    await engineRun((engine) =>
-      engine.run(
-        castVotes({
-          session,
-          person: who,
-          version: 1,
-          votes: [{ film, vote: 'yes' }],
-        }),
-      ),
-    )
+  await engineRun((engine) =>
+    engine.run(
+      castVotes({
+        session,
+        person: who,
+        version: 1,
+        votes: films.map((film) => ({ film, vote: 'yes' as const })),
+        ...(ranked && { ranking: films }),
+      }),
+    ),
+  )
 }
 
-test('a Presente sends only yes votes and the Dono sees the new Cartaz order', async ({
+/** The titles of the Ordem's rows, in order. */
+const ordered = (participant: Page) =>
+  participant
+    .getByRole('list', { name: 'Sua ordem' })
+    .getByRole('listitem')
+    .allInnerTexts()
+
+test('two Presentes rank their sins and the Cartaz follows the lowest sum of positions', async ({
   page,
   browser,
 }, info) => {
@@ -663,54 +679,68 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
     attendees: ['dono', person, other],
     count: 3,
   })
-  const [first, second, third] = opened.films
+  const [a, b, c] = [opened.films[0]!, opened.films[1]!, opened.films[2]!]
   const session = opened.session.id
-  // One earlier yes of this Presente on the first film, and one of the
-  // other on the third. The deck shows what this Presente has yet to vote
-  // on, and sends her earlier yes again with the new ones.
-  await castEarlierYes(session, [
-    [person, first!.id],
-    [other, third!.id],
-  ])
+  // The other Presente ranked c, a, b. This one said yes to the first film
+  // before, with no Ordem: the deck holds the 2 she has not voted on, and
+  // her Ordem has all three.
+  await castYes(session, other, [c.id, a.id, b.id], true)
+  await castYes(session, person, [a.id], false)
 
   await loginAsBruno(page)
   await page.goto(`/sessoes/${session}`)
   const titles = page.getByRole('article').getByRole('heading', { level: 3 })
   await expect(titles).toHaveCount(3)
-  await expect(titles).toContainText([
-    first!.title,
-    second!.title,
-    third!.title,
-  ])
+  await expect(titles).toContainText([a.title, b.title, c.title])
   const href = await sessionLinkFor(page, person)
 
   await asParticipant(browser, href, async (participant) => {
-    // Her earlier yes counts: the deck holds the 2 she has not voted on.
     await participant
       .getByRole('link', { name: 'Votar nos 2 que chegaram' })
       .click()
     const yes = participant.getByRole('button', { name: 'Sim', exact: true })
     await yes.click()
+    await expect(
+      participant.getByText('Filme 2 de 2', { exact: true }),
+    ).toBeVisible()
     await yes.click()
     await expect(participant.getByText('2 sins · nenhum não')).toBeVisible()
+    await participant.getByRole('button', { name: 'Pôr em ordem' }).click()
+    await expect(
+      participant.getByRole('heading', { name: 'Qual você quer mais?' }),
+    ).toBeVisible()
+    expect(await ordered(participant)).toEqual(
+      [a, b, c].map((f, i) => expect.stringContaining(`${i + 1}. ${f.title}`)),
+    )
+    // She ranks b, c, a: the first film goes down twice.
+    await participant
+      .getByRole('button', { name: new RegExp(`^Mover ${a.title}`, 'u') })
+      .press('ArrowDown')
+    await participant
+      .getByRole('button', { name: new RegExp(`^Mover ${a.title}`, 'u') })
+      .press('ArrowDown')
+    await expect
+      .poll(() => ordered(participant))
+      .toEqual(
+        [b, c, a].map((f, i) =>
+          expect.stringContaining(`${i + 1}. ${f.title}`),
+        ),
+      )
+    await snap(participant, info, 'sessao-ordem')
     await participant.getByRole('button', { name: 'Enviar votos' }).click()
     await expect(participant.getByRole('status')).toHaveText(
       'Votos contados. A lista foi atualizada.',
     )
-    await snap(participant, info, 'sessao-sins-contados')
 
+    // c 1+2, b 3+1, a 2+3.
     await page.reload()
     await expect(titles).toHaveCount(3)
-    await expect(titles).toContainText([
-      third!.title,
-      first!.title,
-      second!.title,
-    ])
-    await snap(page, info, 'sessao-cartaz-reordenado')
+    await expect(titles).toContainText([c.title, b.title, a.title])
+    await snap(page, info, 'sessao-cartaz-pela-ordem')
 
     // Mudar votos opens again over every film (pass 4 F1): the router
     // writes `mudar` back, and the page must keep it. Her Votos come back
-    // chosen, on the recap (#340); Recomeçar asks every film again.
+    // chosen, on the recap (#340), and her Ordem as she left it (#379).
     await participant
       .getByRole('link', { name: 'Mudar votos', exact: true })
       .click()
@@ -722,6 +752,15 @@ test('a Presente sends only yes votes and the Dono sees the new Cartaz order', a
       participant.getByText(/Seus votos de antes estão marcados/u),
     ).toBeVisible()
     await snap(participant, info, 'sessao-mudar-votos')
+    await participant.getByRole('button', { name: 'Pôr em ordem' }).click()
+    await expect
+      .poll(() => ordered(participant))
+      .toEqual(
+        [b, c, a].map((f, i) =>
+          expect.stringContaining(`${i + 1}. ${f.title}`),
+        ),
+      )
+    await participant.getByRole('button', { name: 'Voltar aos votos' }).click()
     await participant.getByRole('button', { name: 'Recomeçar' }).click()
     await expect(participant.getByText('Filme 1 de 3')).toBeVisible()
   })

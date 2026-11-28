@@ -5,9 +5,14 @@
 //   Presente's latest submission replaces her earlier votes (#205).
 // - A no is a Trocar from that Presente: the film goes in `swapped` of the
 //   current version and never comes back in the Session (#66).
-// - A yes lifts the film: the kept films with more yes in the Session come
-//   first, at the numbers the kept films had. A changed order calls for a
-//   redo even when every film stays (#205).
+// - After the deck, each Presente may send her Ordem (#379): her yes films
+//   in the order she wants them, kept with her latest submission. The
+//   kept films go by the lowest sum of positions over the Presentes who
+//   ranked, at the numbers the kept films had; a film a ranker has not
+//   placed counts as the middle of her list. Ties, or nobody ranked yet:
+//   the Regra de escolha (the redo breaks them). A changed order calls
+//   for a redo even when every film stays (#205), and so does a new Ordem
+//   that leaves a tie for the Regra to break.
 // - A film no longer on the current screen is skipped, with a warning: the
 //   deck was of an older version and another Presente's no redid it.
 // - Votos are no Fato: no Nota, no Declarado, nothing about taste.
@@ -59,13 +64,16 @@ export interface CastVotesRequest {
     readonly film: string
     readonly vote: VoteValue
   }>
+  /** Her Ordem (#379): her yes films, the one she wants most first. Only
+   * films she says yes to in this submission count. */
+  readonly ranking?: ReadonlyArray<string>
 }
 
 export interface CastVotes {
   readonly session: { readonly id: string; readonly file: string }
   readonly version: number
   readonly currentVersion: number
-  /** A film was swapped or the yes votes changed the screen's order. */
+  /** A film was swapped or the Ordens changed the screen's order. */
   readonly regenerate: boolean
   /** The ids that stay, in the current screen's order. */
   readonly keep: ReadonlyArray<string>
@@ -86,6 +94,8 @@ const StoredVote = Schema.Struct({
   vote: Schema.Literals(['yes', 'no']),
   date: Schema.optionalKey(Schema.String),
   replaces: Schema.optionalKey(Schema.Boolean),
+  /** The Ordem of the submission this Voto opens (#379). */
+  ranking: Schema.optionalKey(Schema.Array(Schema.String)),
 })
 type StoredVote = typeof StoredVote.Type
 const isStoredVote = Schema.is(StoredVote)
@@ -108,22 +118,6 @@ export const votedBy = (
       .map((v) => v.film),
   )
 
-/** Film → how many Presentes said yes in their latest submission. Legacy
- * votes were saved by film, with no way to tell submissions apart. */
-export const yesVotes = (front: YamlMapping): ReadonlyMap<string, number> => {
-  const latest = new Map<string, Map<string, VoteValue>>()
-  for (const { person, film, vote, replaces } of sessionVotes(front)) {
-    const votes = (replaces ? undefined : latest.get(person)) ?? new Map()
-    votes.set(film, vote)
-    latest.set(person, votes)
-  }
-  const count = new Map<string, number>()
-  for (const votes of latest.values())
-    for (const [film, vote] of votes)
-      if (vote === 'yes') count.set(film, (count.get(film) ?? 0) + 1)
-  return count
-}
-
 /** `person`'s standing Votos: her latest submission, film by film (#275). */
 export const latestVotes = (
   front: YamlMapping,
@@ -138,11 +132,53 @@ export const latestVotes = (
   return votes
 }
 
-/** Most yes votes first. Ties keep the given screen order. */
-export const orderByYes = (
+/** `person`'s Ordem (#379): the one of her latest submission, or null when
+ * that submission had none. */
+export const latestRanking = (
+  front: YamlMapping,
+  person: string,
+): ReadonlyArray<string> | null => {
+  let ranking: ReadonlyArray<string> | null = null
+  for (const vote of sessionVotes(front))
+    if (vote.person === person && vote.replaces) ranking = vote.ranking ?? null
+  return ranking
+}
+
+/** Film → the sum of its positions over the Presentes who ranked, for
+ * `films` (#379). Each Ordem counts only its films among `films`, from 1;
+ * a film she has not placed counts as the middle of her list. Undefined
+ * when nobody ranked any of them. */
+export const rankSums = (
+  front: YamlMapping,
   films: ReadonlyArray<string>,
-  yes: ReadonlyMap<string, number>,
-): string[] => films.toSorted((a, b) => (yes.get(b) ?? 0) - (yes.get(a) ?? 0))
+): ReadonlyMap<string, number> | undefined => {
+  const people = new Set(sessionVotes(front).map((v) => v.person))
+  const orders = [...people]
+    .map((person) => latestRanking(front, person) ?? [])
+    .map((ranking) => ranking.filter((film) => films.includes(film)))
+    .filter((ranking) => ranking.length > 0)
+  if (orders.length === 0) return undefined
+  return new Map(
+    films.map((film) => [
+      film,
+      orders.reduce((sum, ranking) => {
+        const at = ranking.indexOf(film)
+        return sum + (at === -1 ? (ranking.length + 1) / 2 : at + 1)
+      }, 0),
+    ]),
+  )
+}
+
+/** Lowest sum first. Ties keep the given order. */
+export const orderByRanking = <A>(
+  items: ReadonlyArray<A>,
+  sums: ReadonlyMap<string, number>,
+  idOf: (item: A) => string,
+): A[] =>
+  items.toSorted((a, b) => (sums.get(idOf(a)) ?? 0) - (sums.get(idOf(b)) ?? 0))
+
+const hasTie = (sums: ReadonlyMap<string, number>): boolean =>
+  new Set(sums.values()).size < sums.size
 
 /** Reads the Session the Votos are for: open, with the version asked and
  * `person` among its Presentes. */
@@ -167,11 +203,13 @@ const openForVotes = (request: CastVotesRequest) =>
     return { session, front, current, currentNumber }
   })
 
-/** Adds the Votos cast to `front`, a no as a Trocado. */
+/** Adds the Votos cast to `front`, a no as a Trocado, and her Ordem on
+ * the submission's first Voto. */
 const addVotes = (
   front: Map<string, YamlValue>,
   person: string,
   cast: ReadonlyMap<string, VoteValue>,
+  ranking: ReadonlyArray<string>,
   today: string,
 ): void => {
   front.set('votes', [
@@ -184,6 +222,9 @@ const addVotes = (
           ['vote', vote],
           ['date', today],
           ...(i === 0 ? ([['replaces', true]] as const) : []),
+          ...(i === 0 && ranking.length > 0
+            ? ([['ranking', [...ranking]]] as const)
+            : []),
         ]),
     ),
   ])
@@ -215,8 +256,14 @@ const recordVotes = (request: CastVotesRequest, today: string) =>
           `voto em ${film} ignorado: o filme não está mais na tela da versão ${currentNumber}`,
         )
 
+    const ranking = [
+      ...new Set(
+        (request.ranking ?? []).filter((film) => cast.get(film) === 'yes'),
+      ),
+    ]
+    const before = latestRanking(front, request.person) ?? []
     if (cast.size > 0) {
-      addVotes(front, request.person, cast, today)
+      addVotes(front, request.person, cast, ranking, today)
       yield* writeSession(id, front, session.body)
     }
 
@@ -228,9 +275,14 @@ const recordVotes = (request: CastVotesRequest, today: string) =>
     for (const film of screen)
       if (out.has(film.id)) dropped.push({ ...film, cause: 'swapped' })
       else keep.push(film.id)
-    const reordered = orderByYes(keep, yesVotes(front)).some(
-      (id, i) => id !== keep[i],
-    )
+    const sums = rankSums(front, keep)
+    const reordered =
+      sums !== undefined &&
+      (orderByRanking(keep, sums, (film) => film).some(
+        (film, i) => film !== keep[i],
+      ) ||
+        // Only the redo knows the Regra that breaks a tie.
+        (hasTie(sums) && cast.size > 0 && ranking.join() !== before.join()))
     const result: CastVotes = {
       session: { id, file: sessionRelative(id) },
       version: request.version,

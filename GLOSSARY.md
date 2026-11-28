@@ -117,7 +117,7 @@ Uma Recomendação de uma Sessão aberta. Quando o Dono pede outra lista na mesm
 _Evitar_: rodada, tentativa
 
 **Mantido** [kept, `kept`]:
-Um filme da versão anterior que o Dono quer na próxima. Ao regerar, ocupa um dos números dos Mantidos, em ordem de Votos, e só as vagas ganham filme novo. Na edição da Sessão (dos Presentes ou do pedido), cada Mantido fica no próprio número. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
+Um filme da versão anterior que o Dono quer na próxima. Ao regerar, ocupa um dos números dos Mantidos, na ordem das Ordens dos Presentes, e só as vagas ganham filme novo. Na edição da Sessão (dos Presentes ou do pedido), cada Mantido fica no próprio número. Sai por Restrição ou Veto do pedido refeito, ou por estar abaixo da nota mínima do IMDb, nunca por gosto novo. O que sai da versão anterior vira uma saída, com o motivo: Já visto, trocado, a Restrição, o Veto ou a nota mínima.
 _Evitar_: fixado, travado
 
 **Cartaz** [billboard, `Billboard`]:
@@ -149,8 +149,12 @@ O que a versão da Sessão guarda quando passaram menos filmes do que o pedido: 
 _Evitar_: aviso, erro
 
 **Voto** [vote, `votes`, `replaces`; `yes`, `no`]:
-O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. Na contagem vale o último envio de cada Presente, cujo primeiro Voto tem `replaces: true`. Os Mantidos com mais sins vêm primeiro, nos números que os Mantidos já tinham, e os empates mantêm a ordem. Se a ordem muda, o sim por si só regera a Sessão (#205). Voto não é Fato e não mexe no gosto.
+O sim ou o não de um Presente a um filme da tela, dado no celular pelo Link da Sessão, um filme de cada vez (o swipe do grupo, #182). Fica na versão da Sessão com quem votou e a data. O não é um Trocado daquele Presente: o filme sai e a Sessão regera. Na contagem vale o último envio de cada Presente, cujo primeiro Voto tem `replaces: true` e leva a Ordem dela. O sim sozinho não mexe na ordem: quem ordena é a Ordem. Voto não é Fato e não mexe no gosto.
 _Evitar_: curtida, like
+
+**Ordem** [ranking, `ranking`, `rankSums`]:
+Os filmes a que um Presente deu sim, na ordem em que ele os quer, montada no fim do swipe arrastando a lista (#379). Começa na ordem do motor, ou na Ordem anterior dele; o filme que entrou depois vai para o meio. Fica no primeiro Voto do último envio dele. A lista da Sessão segue a menor soma das posições entre os Presentes que ordenaram, nos números que os Mantidos já tinham; um filme que um Presente ainda não pôs na Ordem conta como o meio da lista dele. Empate, ou ninguém ordenou: a Regra de escolha. Se a ordem muda, a Ordem por si só regera a Sessão.
+_Evitar_: ranking, classificação, preferência
 
 **Saída** [dropped, `dropped`; causa: `seen`, `swapped`, `constraint`, `veto`, `min_rating`, `mood`]:
 Um filme da versão anterior que não está na nova, com a causa. A causa `mood` é de quem caiu porque o Dono pediu outro Clima: o filme continua elegível na Sessão. A causa não é Motivo: Motivo é por que um filme está na Recomendação.

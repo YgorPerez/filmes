@@ -62,6 +62,7 @@ const PATHS = {
     </>
   ),
   close: <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />,
+  grip: <path d="M5 9h14M5 15h14" />,
   alert: (
     <>
       <path d="M12 4l9 16H3z" />

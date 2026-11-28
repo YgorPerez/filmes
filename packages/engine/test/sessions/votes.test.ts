@@ -1,7 +1,8 @@
 // The Votos of the group swipe (#182): each Presente says yes or no to the
 // films of the screen through the Link da Sessão. A no is a Trocar from
-// that Presente; a yes can move kept films and redo the Session on its
-// own (#205). Votos are no Fato and never touch taste.
+// that Presente; her Ordem can move kept films and redo the Session on
+// its own (#205, #379; more in ranking.test.ts). Votos are no Fato and
+// never touch taste.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -61,44 +62,6 @@ const front = (fixture: Fixture, id: string) => {
 }
 
 describe('castVotes', () => {
-  test('yes votes alone put the most-voted film first and keep the whole screen', async () => {
-    const fixture = useFixture()
-    const { id, f, attendees } = await open(fixture)
-    await vote(fixture, {
-      session: id,
-      person: attendees.find((p) => p !== 'iara')!,
-      version: 1,
-      votes: [
-        { film: f[0]!, vote: 'yes' },
-        { film: f[1]!, vote: 'yes' },
-      ],
-    })
-    const out = await vote(fixture, {
-      session: id,
-      person: 'iara',
-      version: 1,
-      votes: [
-        { film: f[3]!, vote: 'yes' },
-        { film: f[1]!, vote: 'yes' },
-      ],
-    })
-    expect(out.regenerate).toBe(true)
-    expect(out.dropped).toEqual([])
-
-    const redone = await redo(fixture, id, out.keep)
-    expect(redone.session.version).toBe(2)
-    expect(redone.films.map((film) => film.id)).toEqual([
-      f[1],
-      f[0],
-      f[3],
-      f[2],
-      f[4],
-    ])
-    expect(redone.dropped).toEqual([])
-  })
-})
-
-describe('castVotes', () => {
   test('a Presente’s latest vote set replaces the previous version’s votes', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture)
@@ -106,25 +69,39 @@ describe('castVotes', () => {
       session: id,
       person: 'iara',
       version: 1,
-      votes: [{ film: f[3]!, vote: 'yes' }],
+      votes: [
+        { film: f[3]!, vote: 'yes' },
+        { film: f[0]!, vote: 'yes' },
+      ],
+      ranking: [f[3]!, f[0]!],
     })
     const second = await redo(fixture, id, first.keep)
-    expect(second.films[0]?.id).toBe(f[3])
+    expect(second.films.map((film) => film.id)).toEqual([
+      f[3],
+      f[1],
+      f[2],
+      f[4],
+      f[0],
+    ])
 
     const latest = await vote(fixture, {
       session: id,
       person: 'iara',
       version: 2,
-      votes: [{ film: f[2]!, vote: 'yes' }],
+      votes: [
+        { film: f[2]!, vote: 'yes' },
+        { film: f[3]!, vote: 'yes' },
+      ],
+      ranking: [f[2]!, f[3]!],
     })
     expect(latest.regenerate).toBe(true)
     const third = await redo(fixture, id, latest.keep)
     expect(third.films.map((film) => film.id)).toEqual([
       f[2],
-      f[3],
       f[0],
       f[1],
       f[4],
+      f[3],
     ])
   })
 
@@ -135,7 +112,11 @@ describe('castVotes', () => {
       session: id,
       person: 'iara',
       version: 1,
-      votes: [{ film: f[0]!, vote: 'yes' }],
+      votes: [
+        { film: f[4]!, vote: 'yes' },
+        { film: f[3]!, vote: 'yes' },
+      ],
+      ranking: [f[4]!, f[3]!],
     })
     const file = join(fixture.data, 'sessions', `${id}.md`)
     const original = readFileSync(file, 'utf8')
@@ -143,16 +124,16 @@ describe('castVotes', () => {
       file,
       original.replace(
         '\n---',
-        `\n- {person: iara, film: ${f[2]}, vote: 'yes', replaces: 'false'}\n---`,
+        `\n- {person: iara, film: ${f[2]}, vote: 'yes', replaces: 'false', ranking: [${f[2]}]}\n---`,
       ),
     )
     const redone = await redo(fixture, id, f)
-    expect(redone.films[0]?.id).toBe(f[0])
+    expect(redone.films[0]?.id).toBe(f[4])
   })
 })
 
 describe('castVotes', () => {
-  test('equal yes counts keep the current order without a new version', async () => {
+  test('yes votes without an Ordem keep the current order without a new version', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture)
     const out = await vote(fixture, {
@@ -167,7 +148,7 @@ describe('castVotes', () => {
     expect(front(fixture, id).versions).toBeUndefined()
   })
 
-  test('a Restrição still removes an ineligible kept film when yes votes call for a redo', async () => {
+  test('a Restrição still removes an ineligible kept film when an Ordem calls for a redo', async () => {
     const fixture = useFixture()
     const { id, f } = await open(fixture)
     const out = await vote(fixture, {
@@ -178,6 +159,7 @@ describe('castVotes', () => {
         { film: f[1]!, vote: 'yes' },
         { film: f[3]!, vote: 'yes' },
       ],
+      ranking: [f[3]!, f[1]!],
     })
     expect(out.regenerate).toBe(true)
 
@@ -238,14 +220,16 @@ describe('castVotes', () => {
 })
 
 describe('castVotes', () => {
-  test('a yes lifts the kept film to the first kept number; free places stay', async () => {
+  test('the Ordem moves the kept films among their numbers; free places stay', async () => {
     const fixture = useFixture()
     const { id, f, attendees } = await open(fixture)
+    const order = [f[3]!, f[0]!, f[2]!, f[4]!]
     await vote(fixture, {
       session: id,
       person: 'iara',
       version: 1,
-      votes: [{ film: f[3]!, vote: 'yes' }],
+      votes: order.map((film) => ({ film, vote: 'yes' as const })),
+      ranking: order,
     })
     const out = await vote(fixture, {
       session: id,
