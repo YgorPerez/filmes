@@ -292,7 +292,12 @@ export {
   type PairwiseRequest,
   type WaitingAnswer,
   type WaitingAnswers,
+  type WaitingGesture,
 } from './sessions/pairwise.ts'
+export {
+  type SeenGesture,
+  type SeenReaction,
+} from './sessions/seen-gestures.ts'
 export {
   castVotes,
   votedBy,

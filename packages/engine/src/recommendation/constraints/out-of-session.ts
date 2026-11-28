@@ -19,7 +19,9 @@
 //   films.
 // - Já vi: the film a version showed and that a Presente of the Session, of
 //   now or of some version, has seen since that version's date (the
-//   Cartaz's Já vi, or a Já visto recorded during the Session).
+//   Cartaz's Já vi, or a Já visto recorded during the Session), and the
+//   film a Presente gave a Vi e gostei / Vi e não gostei on the swipe,
+//   even while it waits for the Dono's yes (#378).
 
 import { Effect } from 'effect'
 import { pyStrip } from '../../compat/text.ts'
@@ -36,6 +38,7 @@ import { engineError } from '../../runtime/EngineError.ts'
 import { text } from '../../sqlite/row.ts'
 import type { Connection, SqliteError } from '../../sqlite/Sqlite.ts'
 import { currentVersion, readSession, shownFilms } from '../../sessions/file.ts'
+import { gesturedFilms } from '../../sessions/seen-gestures.ts'
 import {
   drop,
   pass,
@@ -163,6 +166,7 @@ const outOfSession = (
       const swapped = swappedIn(versions)
       for (const id of swappedNow(current, keep, swap)) swapped.add(id)
       const seen = yield* seenIn(context.db, versions, context.attendees)
+      for (const id of gesturedFilms(front).keys()) seen.add(id)
       return new Map(
         [...films.keys()].map((id): [string, Verdict] => [
           id,
